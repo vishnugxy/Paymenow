@@ -1,0 +1,1467 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pay Me Now</title>
+<meta name="description" content="Pay Me Now: take up to half of your campus job pay the same day. Tap in with your NFC card, get approved, spend or withdraw. No interest.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=DM+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+
+/* Layout idea: three live screens side by side (student phone, department console, campus NFC reader)
+   so one tap or one approval visibly changes the others. */
+:root {
+  --bg: #EDF1F6;
+  --surface: #FFFFFF;
+  --surface-2: #F4F7FA;
+  --ink: #0F1A2B;
+  --muted: #566176;
+  --line: #D9E0E9;
+  --accent: #0A7F66;
+  --accent-ink: #FFFFFF;
+  --accent-soft: #DDF3EC;
+  --warn: #8A4B00;
+  --warn-soft: #FFEBCF;
+  --info: #1F4FA8;
+  --info-soft: #E1EBFF;
+  --bad: #A4262C;
+  --bad-soft: #FDE4E4;
+  --font-display: "Bricolage Grotesque", "Segoe UI", sans-serif;
+  --font-body: "DM Sans", "Segoe UI", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0A111B; --surface: #131D2B; --surface-2: #1A2638; --ink: #E9EFF7; --muted: #9AA9BD; --line: #263650;
+    --accent: #3DD6AE; --accent-ink: #052A21; --accent-soft: #123B33;
+    --warn: #FFC372; --warn-soft: #402B0C; --info: #8EB4FF; --info-soft: #172A52; --bad: #FF9A9F; --bad-soft: #451A1D;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0A111B; --surface: #131D2B; --surface-2: #1A2638; --ink: #E9EFF7; --muted: #9AA9BD; --line: #263650;
+  --accent: #3DD6AE; --accent-ink: #052A21; --accent-soft: #123B33;
+  --warn: #FFC372; --warn-soft: #402B0C; --info: #8EB4FF; --info-soft: #172A52; --bad: #FF9A9F; --bad-soft: #451A1D;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; min-height: 100%; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 15px; line-height: 1.45; }
+button, input, select { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.num { font-variant-numeric: tabular-nums; }
+
+.page { max-width: 1260px; margin: 0 auto; padding: 24px 16px 40px; display: flex; flex-direction: column; gap: 18px; }
+.top { display: flex; flex-wrap: wrap; gap: 12px 24px; align-items: flex-end; justify-content: space-between; }
+.top h1 { font-family: var(--font-display); font-size: 34px; line-height: 1.05; margin: 0; letter-spacing: -0.01em; text-wrap: balance; }
+.top p { margin: 6px 0 0; color: var(--muted); max-width: 62ch; }
+.top-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.ghost { background: transparent; border: 1px solid var(--line); border-radius: 999px; padding: 8px 14px; font-weight: 500; }
+.ghost:hover { border-color: var(--muted); }
+.ghost.small { padding: 5px 11px; font-size: 13px; }
+
+.clockbar { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 10px 14px; }
+.clockbar b { font-family: var(--font-display); }
+.clockbar .sel { display: flex; align-items: center; gap: 6px; }
+.clockbar select, .field select, .field input { border: 1px solid var(--line); background: var(--surface); border-radius: 10px; padding: 7px 9px; }
+.clockbar .hint { color: var(--muted); font-size: 13px; flex: 1; min-width: 200px; }
+
+.seg { display: none; background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 4px; gap: 4px; }
+.seg button { flex: 1; border: 0; background: transparent; padding: 9px 8px; border-radius: 999px; font-weight: 500; color: var(--muted); }
+.seg button[aria-selected="true"] { background: var(--ink); color: var(--bg); }
+
+.stage { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 22px; align-items: start; }
+.col-label { font-weight: 700; font-size: 13px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin: 0 4px 8px; display: flex; justify-content: space-between; gap: 8px; }
+.device { position: relative; height: 760px; background: var(--surface); border: 1px solid var(--line); border-radius: 28px; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 10px 30px rgba(15,26,43,0.08); }
+.appbar { padding: 14px 16px 12px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--line); gap: 8px; }
+.appbar b { font-family: var(--font-display); font-size: 20px; }
+.appbar .meta { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 13px; }
+.bell { position: relative; border: 1px solid var(--line); background: var(--surface); width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; }
+.bell svg { width: 18px; height: 18px; }
+.bell .dot { position: absolute; top: -4px; right: -4px; min-width: 18px; height: 18px; border-radius: 999px; background: var(--bad); color: #fff; font-size: 11px; font-weight: 700; display: grid; place-items: center; padding: 0 4px; }
+.screen { flex: 1; overflow-y: auto; padding: 14px 14px 20px; display: flex; flex-direction: column; gap: 12px; }
+.screen > * { flex-shrink: 0; }
+.tabs { display: flex; border-top: 1px solid var(--line); background: var(--surface); }
+.tabs button { white-space: nowrap; flex: 1; border: 0; background: transparent; padding: 12px 2px 14px; color: var(--muted); font-weight: 500; font-size: 13px; position: relative; }
+.tabs button[aria-selected="true"] { color: var(--accent); font-weight: 700; }
+.tabs button[aria-selected="true"]::before { content: ""; position: absolute; left: 28%; right: 28%; top: 0; height: 3px; border-radius: 0 0 3px 3px; background: var(--accent); }
+.badge-count { background: var(--warn-soft); color: var(--warn); border-radius: 999px; font-size: 10px; padding: 0 5px; margin-left: 2px; }
+
+.chips { display: flex; gap: 8px; flex-wrap: wrap; }
+.chip { border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 6px 12px; font-size: 14px; }
+.chip[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+
+.card { background: var(--surface-2); border: 1px solid var(--line); border-radius: 16px; padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+.row { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.row.c { align-items: center; }
+.card h3 { margin: 0; font-size: 16px; font-weight: 700; }
+.sub { color: var(--muted); font-size: 13px; }
+.pay { font-family: var(--font-display); font-weight: 700; font-size: 20px; white-space: nowrap; }
+.pill { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; width: fit-content; }
+.pill.open { background: var(--surface); border: 1px solid var(--line); color: var(--muted); }
+.pill.accepted, .pill.nfc { background: var(--info-soft); color: var(--info); }
+.pill.done, .pill.manual { background: var(--warn-soft); color: var(--warn); }
+.pill.paid, .pill.fit, .pill.working { background: var(--accent-soft); color: var(--accent); }
+.pill.clash { background: var(--bad-soft); color: var(--bad); }
+.btn { border: 0; border-radius: 12px; padding: 10px 14px; font-weight: 700; background: var(--accent); color: var(--accent-ink); }
+.btn:hover { filter: brightness(1.06); }
+.btn[disabled] { background: var(--line); color: var(--muted); cursor: not-allowed; filter: none; }
+.btn.alt { background: var(--ink); color: var(--bg); }
+.btn.line { background: transparent; color: var(--ink); border: 1px solid var(--line); }
+.btn.sm { padding: 7px 11px; font-size: 13px; }
+.btn.bad { background: var(--bad); color: #fff; }
+.link { background: none; border: 0; padding: 0; color: var(--info); text-decoration: underline; font-size: 13px; }
+
+.hero { background: var(--ink); color: var(--bg); border-radius: 20px; padding: 18px; display: flex; flex-direction: column; gap: 6px; }
+.hero small { opacity: 0.8; font-size: 13px; }
+.hero .big { font-family: var(--font-display); font-size: 44px; font-weight: 700; line-height: 1; }
+.stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.stat { background: var(--surface-2); border: 1px solid var(--line); border-radius: 14px; padding: 10px; }
+.stat b { display: block; font-family: var(--font-display); font-size: 17px; }
+.stat span { font-size: 12px; color: var(--muted); }
+.meter { height: 10px; background: var(--line); border-radius: 999px; overflow: hidden; }
+.meter i { display: block; height: 100%; background: var(--accent); border-radius: 999px; }
+.meter.warn i { background: #D98A1D; }
+.amounts { display: flex; gap: 8px; flex-wrap: wrap; }
+.field { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 110px; }
+.field label { font-size: 12px; font-weight: 700; color: var(--muted); }
+.field input, .field select { width: 100%; }
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.form-grid .wide { grid-column: 1 / -1; }
+.ledger { display: flex; flex-direction: column; }
+.ledger .l { display: flex; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.ledger .l:last-child { border-bottom: 0; }
+.plus { color: var(--accent); font-weight: 700; }
+.minus { color: var(--ink); font-weight: 700; }
+h4 { margin: 4px 0 0; font-family: var(--font-display); font-size: 16px; }
+.note { font-size: 13px; color: var(--muted); }
+.empty { text-align: center; color: var(--muted); padding: 24px 8px; }
+.banner { display: flex; gap: 10px; align-items: center; justify-content: space-between; background: var(--info-soft); color: var(--info); border-radius: 14px; padding: 10px 12px; font-weight: 500; font-size: 14px; }
+.toast { position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 12px; font-weight: 500; max-width: calc(100% - 32px); z-index: 30; }
+.toast.err { background: var(--bad); color: #fff; }
+.foot { color: var(--muted); font-size: 13px; display: flex; flex-wrap: wrap; gap: 6px 18px; }
+
+/* NFC card */
+.nfc-card { aspect-ratio: 1.586; border-radius: 20px; padding: 16px 18px; color: #fff; background: radial-gradient(120% 140% at 0% 0%, #12B58F 0%, #0A7F66 35%, #0F1A2B 100%); position: relative; overflow: hidden; display: flex; flex-direction: column; justify-content: space-between; box-shadow: 0 12px 26px rgba(10,127,102,0.25); transition: filter .3s ease; }
+.nfc-card::after { content: ""; position: absolute; width: 260px; height: 260px; right: -90px; top: -110px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.12); box-shadow: 0 0 0 28px rgba(255,255,255,0.05), 0 0 0 58px rgba(255,255,255,0.03); pointer-events: none; }
+.nfc-card.frozen { filter: grayscale(1) brightness(0.75); }
+.nfc-card .t { display: flex; justify-content: space-between; align-items: center; font-family: var(--font-display); font-size: 18px; position: relative; z-index: 1; }
+.nfc-card .t svg { width: 28px; height: 28px; }
+.nfc-card .mid { display: flex; align-items: center; gap: 12px; position: relative; z-index: 1; }
+.chipic { width: 42px; height: 31px; border-radius: 7px; background: linear-gradient(135deg, #F6DE9C, #C99A3A); position: relative; }
+.chipic::before, .chipic::after { content: ""; position: absolute; background: rgba(90,60,0,0.35); }
+.chipic::before { left: 33%; right: 33%; top: 0; bottom: 0; width: 1px; margin: auto; }
+.chipic::after { top: 50%; left: 0; right: 0; height: 1px; }
+.nfc-card .num-l { letter-spacing: 0.12em; font-size: 15px; opacity: 0.95; }
+.nfc-card .b { display: flex; justify-content: space-between; align-items: flex-end; font-size: 13px; position: relative; z-index: 1; }
+.nfc-card .b b { font-size: 15px; letter-spacing: 0.04em; }
+.switch { width: 46px; height: 28px; border-radius: 999px; border: 1px solid var(--line); background: var(--line); position: relative; flex: none; padding: 0; transition: background .2s ease; }
+.switch::after { content: ""; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: var(--surface); box-shadow: 0 1px 3px rgba(0,0,0,0.3); transition: transform .2s ease; }
+.switch[aria-checked="true"] { background: var(--accent); border-color: var(--accent); }
+.switch[aria-checked="true"]::after { transform: translateX(18px); }
+.switch[disabled] { opacity: 0.45; cursor: not-allowed; }
+
+/* NFC waves */
+.waves { position: relative; width: 132px; height: 132px; margin: 8px auto; display: grid; place-items: center; }
+.waves .core { width: 64px; height: 64px; border-radius: 50%; background: var(--accent); color: var(--accent-ink); display: grid; place-items: center; position: relative; z-index: 1; }
+.waves .core svg { width: 32px; height: 32px; }
+.waves i { position: absolute; inset: 0; border: 2px solid var(--accent); border-radius: 50%; opacity: 0.35; }
+@media (prefers-reduced-motion: no-preference) {
+  .waves i { opacity: 0; animation: ping 1.8s ease-out infinite; }
+  .waves i:nth-child(2) { animation-delay: .6s; }
+  .waves i:nth-child(3) { animation-delay: 1.2s; }
+  .meter i { transition: width .35s ease; }
+  .sheet { animation: rise .22s ease; }
+}
+@keyframes ping { 0% { transform: scale(.5); opacity: .7; } 100% { transform: scale(1.1); opacity: 0; } }
+@keyframes rise { from { transform: translateY(24px); opacity: 0; } to { transform: none; opacity: 1; } }
+
+/* Sheets */
+.sheet-wrap { position: absolute; inset: 0; background: rgba(10,17,27,0.5); display: flex; align-items: flex-end; z-index: 6; }
+.sheet { background: var(--surface); width: 100%; border-radius: 24px 24px 0 0; padding: 18px; max-height: 88%; overflow: auto; display: flex; flex-direction: column; gap: 12px; }
+.sheet h3 { margin: 0; font-family: var(--font-display); font-size: 20px; }
+.notif { display: flex; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--line); }
+.notif:last-child { border-bottom: 0; }
+.notif .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); margin-top: 7px; flex: none; }
+.notif .dot.read { background: var(--line); }
+
+/* Timetable */
+.tt { display: grid; grid-template-columns: 34px repeat(5, minmax(0, 1fr)); gap: 0 4px; }
+.tt .dh { text-align: center; font-size: 12px; font-weight: 700; color: var(--muted); padding-bottom: 4px; }
+.tt .times { position: relative; height: calc(var(--rows) * var(--px)); }
+.tt .times span { position: absolute; right: 2px; font-size: 10px; color: var(--muted); transform: translateY(-50%); }
+.tt .tcol { position: relative; height: calc(var(--rows) * var(--px)); border-radius: 8px; background: repeating-linear-gradient(to bottom, var(--surface-2) 0, var(--surface-2) calc(var(--px) - 1px), var(--line) calc(var(--px) - 1px), var(--line) var(--px)); overflow: hidden; }
+.tt .tcol.today { outline: 2px solid var(--accent); outline-offset: -2px; }
+.tt .blk { position: absolute; left: 2px; right: 2px; border-radius: 6px; padding: 3px 4px; font-size: 10px; line-height: 1.15; overflow: hidden; font-weight: 700; }
+.tt .blk.class { background: repeating-linear-gradient(45deg, var(--line), var(--line) 5px, var(--surface-2) 5px, var(--surface-2) 10px); color: var(--muted); }
+.tt .blk.accepted { background: var(--info-soft); color: var(--info); border: 1px solid var(--info); }
+.tt .blk.working, .tt .blk.paid { background: var(--accent-soft); color: var(--accent); border: 1px solid var(--accent); }
+.tt .blk.done { background: var(--warn-soft); color: var(--warn); border: 1px solid var(--warn); }
+.tt .now { position: absolute; left: 0; right: 0; height: 2px; background: var(--bad); z-index: 2; }
+.tt .now::before { content: ""; position: absolute; left: -3px; top: -3px; width: 8px; height: 8px; border-radius: 50%; background: var(--bad); }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 12px; font-size: 12px; color: var(--muted); }
+.legend span::before { content: ""; display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 5px; vertical-align: -1px; background: var(--line); }
+.legend .a::before { background: var(--info-soft); border: 1px solid var(--info); }
+.legend .w::before { background: var(--accent-soft); border: 1px solid var(--accent); }
+.legend .d::before { background: var(--warn-soft); border: 1px solid var(--warn); }
+
+/* Reader terminal */
+.t-display { background: var(--ink); color: var(--bg); border-radius: 20px; padding: 18px; text-align: center; display: flex; flex-direction: column; gap: 4px; align-items: center; min-height: 230px; justify-content: center; }
+.t-display small { opacity: 0.8; font-size: 13px; text-transform: uppercase; letter-spacing: 0.06em; }
+.t-display .big { font-family: var(--font-display); font-size: 48px; font-weight: 700; line-height: 1.05; }
+.t-display.ok { background: var(--accent); color: var(--accent-ink); }
+.t-display.no { background: var(--bad); color: #fff; }
+.t-display .waves i, .t-display .waves .core { border-color: var(--bg); }
+.t-display .waves .core { background: var(--bg); color: var(--ink); }
+.t-display .waves i { border-color: var(--bg); }
+.tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.tile { background: var(--surface-2); border: 1px solid var(--line); border-radius: 14px; padding: 12px; text-align: left; display: flex; flex-direction: column; gap: 2px; }
+.tile:hover:not([disabled]) { border-color: var(--accent); }
+.tile[disabled] { opacity: 0.5; cursor: not-allowed; }
+.tile b { font-size: 15px; }
+.led { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: var(--accent); margin-right: 6px; box-shadow: 0 0 0 3px var(--accent-soft); }
+
+@media (max-width: 1100px) {
+  .seg { display: flex; }
+  .stage { grid-template-columns: 1fr; }
+  .col { display: none; }
+  .col.on { display: block; }
+  .device { height: calc(100dvh - 250px); min-height: 600px; max-width: 480px; margin: 0 auto; }
+  .col-label { max-width: 480px; margin-left: auto; margin-right: auto; }
+  .top h1 { font-size: 28px; }
+}
+
+
+/* ===== Site layer =====
+   Layout idea: a timetable-grid paper background, one big live number in the hero,
+   and the working prototype sitting in the page as the proof. */
+html { scroll-behavior: smooth; scroll-padding-top: 76px; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body { font-size: 17px; }
+.s-wrap { max-width: 1180px; margin: 0 auto; padding: 0 20px; }
+.s-section { padding: 88px 0; }
+.s-section.alt { background: var(--surface); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.s-eyebrow { font-weight: 700; font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); margin: 0 0 12px; }
+.s-h2 { font-family: var(--font-display); font-size: clamp(30px, 4.4vw, 48px); line-height: 1.05; letter-spacing: -0.02em; margin: 0 0 16px; text-wrap: balance; font-weight: 700; }
+.s-lead { color: var(--muted); font-size: 19px; max-width: 58ch; margin: 0; }
+.s-head { margin-bottom: 44px; max-width: 760px; }
+.s-btn { display: inline-flex; align-items: center; gap: 8px; border-radius: 14px; padding: 14px 22px; font-weight: 700; font-size: 16px; text-decoration: none; border: 1px solid transparent; }
+.s-btn.primary { background: var(--accent); color: var(--accent-ink); }
+.s-btn.primary:hover { filter: brightness(1.07); }
+.s-btn.ghost2 { border-color: var(--line); color: var(--ink); background: var(--surface); }
+.s-btn.ghost2:hover { border-color: var(--muted); }
+.s-ic { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+
+/* nav */
+.s-nav { position: sticky; top: 0; z-index: 40; background: color-mix(in srgb, var(--bg) 86%, transparent); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-bottom: 1px solid var(--line); }
+.s-nav .s-wrap { display: flex; align-items: center; gap: 22px; height: 64px; }
+.s-brand { display: flex; align-items: center; gap: 10px; font-family: var(--font-display); font-weight: 800; font-size: 21px; text-decoration: none; color: var(--ink); letter-spacing: -0.01em; }
+.s-mark { width: 30px; height: 30px; border-radius: 9px; background: var(--accent); color: var(--accent-ink); display: grid; place-items: center; }
+.s-mark svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2.4; stroke-linecap: round; }
+.s-links { display: flex; gap: 20px; margin-left: 14px; flex: 1; }
+.s-links a { color: var(--muted); text-decoration: none; font-weight: 500; font-size: 15px; }
+.s-links a:hover { color: var(--ink); }
+.s-nav .s-btn { padding: 9px 16px; font-size: 14px; }
+.s-icon-btn { width: 40px; height: 40px; border-radius: 50%; border: 1px solid var(--line); background: var(--surface); display: grid; place-items: center; padding: 0; }
+.s-icon-btn:hover { border-color: var(--muted); }
+
+/* hero */
+.s-hero { position: relative; overflow: hidden; padding: 64px 0 72px; background-image: linear-gradient(var(--line) 1px, transparent 1px), linear-gradient(90deg, var(--line) 1px, transparent 1px); background-size: 56px 56px; background-position: -1px -1px; }
+.s-hero::after { content: ""; position: absolute; inset: 0; background: radial-gradient(70% 90% at 30% 40%, transparent 0%, var(--bg) 100%); opacity: 0.85; pointer-events: none; }
+.s-hero .s-wrap { position: relative; z-index: 1; display: grid; grid-template-columns: 1.05fr 0.95fr; gap: 48px; align-items: center; }
+.s-hero h1 { font-family: var(--font-display); font-weight: 800; font-size: clamp(44px, 7.4vw, 88px); line-height: 0.98; letter-spacing: -0.035em; margin: 0 0 22px; text-wrap: balance; }
+.s-hero h1 em { font-style: normal; color: var(--accent); }
+.s-hero p.s-lead { margin-bottom: 28px; }
+.s-cta { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 30px; }
+.s-facts { display: flex; flex-wrap: wrap; gap: 10px; padding: 0; margin: 0; list-style: none; }
+.s-facts li { background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 7px 14px; font-size: 14px; font-weight: 500; }
+.s-facts b { font-weight: 700; }
+
+.s-stagewrap { display: flex; justify-content: center; position: relative; padding: 10px 0 30px; }
+.s-phone { width: 318px; max-width: 100%; background: var(--surface); border: 1px solid var(--line); border-radius: 38px; padding: 14px; box-shadow: 0 30px 60px rgba(15,26,43,0.16), 0 0 0 8px color-mix(in srgb, var(--ink) 6%, transparent); position: relative; }
+.s-phone .notch { width: 84px; height: 7px; border-radius: 99px; background: var(--line); margin: 0 auto 12px; }
+.s-phone .bal { background: var(--ink); color: var(--bg); border-radius: 22px; padding: 18px; }
+.s-phone .bal small { opacity: 0.8; font-size: 13px; }
+.s-phone .bal .big { font-family: var(--font-display); font-weight: 800; font-size: 52px; line-height: 1; letter-spacing: -0.02em; margin: 4px 0 8px; }
+.s-phone .bal .meter { background: rgba(255,255,255,0.18); }
+.s-phone .feed { display: flex; flex-direction: column; gap: 8px; margin: 14px 2px 6px; min-height: 124px; }
+.s-phone .feed .r { display: flex; justify-content: space-between; gap: 10px; font-size: 14px; background: var(--surface-2); border: 1px solid var(--line); border-radius: 12px; padding: 9px 11px; }
+.s-phone .feed .r span:first-child { color: var(--muted); }
+.s-phone .feed .r b { font-variant-numeric: tabular-nums; }
+.s-phone .feed .r.in { animation: slidein .35s ease; }
+@keyframes slidein { from { transform: translateY(-8px); opacity: 0; } to { transform: none; opacity: 1; } }
+.s-float { position: absolute; z-index: 3; }
+.s-float.card { left: -26px; bottom: 0; width: 230px; }
+.s-float.card .nfc-card { padding: 12px 14px; border-radius: 16px; }
+.s-float.card .nfc-card .t { font-size: 14px; }
+.s-float.card .nfc-card .t svg { width: 22px; height: 22px; }
+.s-float.card .nfc-card .num-l { font-size: 12px; }
+.s-float.card .nfc-card .chipic { width: 32px; height: 24px; }
+.s-float.card .nfc-card .b { font-size: 11px; }
+.s-float.card .nfc-card .b b { font-size: 12px; }
+.s-float.tag { right: -18px; top: 70px; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 10px 14px; box-shadow: 0 14px 30px rgba(15,26,43,0.14); font-size: 13px; max-width: 190px; display: flex; gap: 8px; align-items: center; }
+.s-float.tag .led { margin: 0; flex: none; }
+.s-tapring { position: absolute; right: 36px; bottom: 36px; width: 74px; height: 74px; pointer-events: none; z-index: 2; }
+.s-tapring i { position: absolute; inset: 0; border: 2px solid var(--accent); border-radius: 50%; opacity: 0; }
+.s-tapring.go i { animation: ping 1.4s ease-out 1; }
+.s-tapring.go i:nth-child(2) { animation-delay: .25s; }
+.s-tapring.go i:nth-child(3) { animation-delay: .5s; }
+
+/* stats */
+.s-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0; border: 1px solid var(--line); border-radius: 22px; background: var(--surface); overflow: hidden; }
+.s-stats > div { padding: 26px 24px; border-right: 1px solid var(--line); }
+.s-stats > div:last-child { border-right: 0; }
+.s-stats .n { font-family: var(--font-display); font-weight: 800; font-size: clamp(34px, 4vw, 52px); letter-spacing: -0.03em; line-height: 1; color: var(--accent); }
+.s-stats p { margin: 8px 0 0; color: var(--muted); font-size: 15px; }
+
+/* how */
+.s-steps { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; counter-reset: st; }
+.s-step { background: var(--surface); border: 1px solid var(--line); border-radius: 20px; padding: 22px; display: flex; flex-direction: column; gap: 10px; position: relative; }
+.s-step .no { font-family: var(--font-display); font-weight: 800; font-size: 14px; color: var(--accent); letter-spacing: 0.06em; }
+.s-step h3 { margin: 0; font-family: var(--font-display); font-size: 22px; line-height: 1.1; letter-spacing: -0.01em; }
+.s-step p { margin: 0; color: var(--muted); font-size: 15.5px; }
+.s-step .ico { width: 46px; height: 46px; border-radius: 14px; background: var(--accent-soft); color: var(--accent); display: grid; place-items: center; }
+.s-step .stub { margin-top: auto; padding-top: 12px; border-top: 2px dashed var(--line); font-size: 13px; color: var(--muted); }
+.s-step .stub b { color: var(--ink); font-variant-numeric: tabular-nums; }
+
+/* bento */
+.s-bento { display: grid; grid-template-columns: 1.2fr 1fr 1fr; grid-template-rows: auto auto; gap: 16px; }
+.s-tile { background: var(--surface); border: 1px solid var(--line); border-radius: 22px; padding: 24px; display: flex; flex-direction: column; gap: 10px; }
+.s-tile h3 { margin: 0; font-family: var(--font-display); font-size: 21px; letter-spacing: -0.01em; }
+.s-tile p { margin: 0; color: var(--muted); font-size: 15.5px; }
+.s-tile.s-wide { grid-column: span 2; }
+.s-tile.big { grid-row: span 2; background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.s-tile.big p { color: color-mix(in srgb, var(--bg) 78%, transparent); }
+.s-tile.big .nfc-card { margin-top: auto; }
+.s-tile .ico { width: 42px; height: 42px; border-radius: 12px; background: var(--accent-soft); color: var(--accent); display: grid; place-items: center; }
+.s-mini { display: flex; gap: 4px; align-items: flex-end; height: 44px; margin-top: auto; }
+.s-mini i { flex: 1; background: var(--accent-soft); border-radius: 5px 5px 2px 2px; }
+.s-mini i.hi { background: var(--accent); }
+.s-mini i.cl { background: repeating-linear-gradient(45deg, var(--line), var(--line) 4px, var(--surface-2) 4px, var(--surface-2) 8px); }
+
+/* split */
+.s-split { display: grid; grid-template-columns: 1fr 1fr; gap: 48px; align-items: center; }
+.s-list { list-style: none; padding: 0; margin: 22px 0 0; display: flex; flex-direction: column; gap: 14px; }
+.s-list li { display: flex; gap: 12px; align-items: flex-start; }
+.s-list li svg { color: var(--accent); margin-top: 3px; }
+.s-list b { display: block; }
+.s-list span { color: var(--muted); font-size: 15.5px; }
+.s-console { background: var(--surface); border: 1px solid var(--line); border-radius: 24px; padding: 18px; display: flex; flex-direction: column; gap: 12px; box-shadow: 0 20px 40px rgba(15,26,43,0.08); }
+.s-console .bar { display: flex; justify-content: space-between; align-items: center; font-weight: 700; font-family: var(--font-display); }
+
+/* example */
+.s-example { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+.s-eg { background: var(--surface); border: 1px solid var(--line); border-radius: 20px; padding: 22px; }
+.s-eg .sub { margin-bottom: 4px; }
+.s-eg .v { font-family: var(--font-display); font-weight: 800; font-size: 40px; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.s-eg.hl { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.s-eg.hl .sub { color: color-mix(in srgb, var(--accent-ink) 80%, transparent); }
+.s-principles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-top: 16px; }
+.s-principles div { border-top: 2px solid var(--ink); padding-top: 12px; }
+.s-principles b { font-family: var(--font-display); font-size: 19px; }
+.s-principles p { margin: 6px 0 0; color: var(--muted); font-size: 15.5px; }
+
+/* demo */
+.s-demo { padding: 80px 0 64px; background: var(--bg); }
+.demo-wrap { display: flex; flex-direction: column; gap: 18px; }
+.guide { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 16px 18px; display: flex; flex-direction: column; gap: 12px; }
+.guide .gh { display: flex; flex-wrap: wrap; gap: 10px 16px; justify-content: space-between; align-items: center; }
+.guide ol { list-style: none; counter-reset: g; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 10px; }
+.guide li { counter-increment: g; border: 1px solid var(--line); border-radius: 14px; padding: 10px 12px; font-size: 14px; display: flex; flex-direction: column; gap: 4px; background: var(--surface-2); }
+.guide li::before { content: counter(g); width: 22px; height: 22px; border-radius: 50%; border: 1.5px solid var(--muted); display: grid; place-items: center; font-size: 12px; font-weight: 700; color: var(--muted); }
+.guide li.done { background: var(--accent-soft); border-color: var(--accent); }
+.guide li.done::before { content: "✓"; background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.guide li b { font-size: 14px; }
+.guide li span { color: var(--muted); font-size: 13px; }
+
+/* faq */
+.s-faq { max-width: 820px; display: flex; flex-direction: column; }
+.s-faq details { border-top: 1px solid var(--line); padding: 18px 0; }
+.s-faq details:last-child { border-bottom: 1px solid var(--line); }
+.s-faq summary { cursor: pointer; font-weight: 700; font-size: 18px; list-style: none; display: flex; justify-content: space-between; gap: 16px; }
+.s-faq summary::-webkit-details-marker { display: none; }
+.s-faq summary::after { content: "+"; font-size: 24px; line-height: 1; color: var(--accent); }
+.s-faq details[open] summary::after { content: "–"; }
+.s-faq p { margin: 10px 0 0; color: var(--muted); max-width: 64ch; }
+
+/* qr / cta */
+.s-cta-band { background: var(--ink); color: var(--bg); border-radius: 30px; padding: 48px; display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 40px; align-items: center; }
+.s-cta-band .s-h2 { color: var(--bg); }
+.s-cta-band p { color: color-mix(in srgb, var(--bg) 78%, transparent); max-width: 50ch; }
+.s-qrbox { background: #fff; color: #000; border-radius: 22px; padding: 18px; width: min(260px, 100%); margin-left: auto; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.s-qrbox svg { width: 100%; height: auto; display: block; }
+.s-qrbox small { color: #3a4456; font-size: 12px; text-align: center; }
+.s-copy { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-top: 18px; }
+.s-copy code { background: rgba(255,255,255,0.12); border-radius: 10px; padding: 9px 12px; font-size: 13px; word-break: break-all; }
+.s-copy button { border: 0; border-radius: 12px; background: var(--accent); color: var(--accent-ink); font-weight: 700; padding: 10px 16px; }
+
+.s-foot { padding: 40px 0 60px; color: var(--muted); font-size: 14px; }
+.s-foot .s-wrap { display: flex; flex-wrap: wrap; gap: 14px 40px; justify-content: space-between; }
+.s-foot p { margin: 0; max-width: 62ch; }
+
+@media (max-width: 980px) {
+  .s-hero .s-wrap, .s-split, .s-cta-band { grid-template-columns: 1fr; }
+  .s-steps { grid-template-columns: 1fr 1fr; }
+  .s-bento { grid-template-columns: 1fr 1fr; }
+  .s-tile.big { grid-row: auto; grid-column: 1 / -1; }
+  .s-tile.s-wide { grid-column: 1 / -1; }
+  .s-stats { grid-template-columns: 1fr 1fr; }
+  .s-stats > div:nth-child(2) { border-right: 0; }
+  .s-stats > div:nth-child(-n+2) { border-bottom: 1px solid var(--line); }
+  .s-example, .s-principles { grid-template-columns: 1fr; }
+  .guide ol { grid-template-columns: 1fr 1fr; }
+  .s-qrbox { margin: 0; }
+}
+@media (max-width: 760px) {
+  .s-links { display: none; }
+  .s-nav .s-wrap { justify-content: space-between; }
+  .s-section { padding: 60px 0; }
+  .s-hero { padding-top: 36px; }
+  .s-steps, .s-bento { grid-template-columns: 1fr; }
+  .s-float.card { left: -6px; width: 200px; }
+  .s-float.tag { right: -4px; }
+  .s-cta-band { padding: 28px; }
+}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-nfc" viewBox="0 0 24 24"><path d="M6 8.5a5 5 0 0 1 0 7"/><path d="M10 6a8.5 8.5 0 0 1 0 12"/><path d="M14 3.5a12 12 0 0 1 0 17"/></symbol>
+    <symbol id="i-cal" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15" rx="3"/><path d="M8 3v4M16 3v4M3.5 10h17"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></symbol>
+    <symbol id="i-wallet" viewBox="0 0 24 24"><path d="M4 7.5A2.5 2.5 0 0 1 6.5 5H18v3"/><rect x="3.5" y="8" width="17" height="11.5" rx="3"/><circle cx="16.5" cy="13.7" r="1.2"/></symbol>
+    <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3.5l7 2.5v5.5c0 4-3 7.2-7 9-4-1.8-7-5-7-9V6z"/><path d="M9 12l2.2 2.2L15.5 10"/></symbol>
+    <symbol id="i-list" viewBox="0 0 24 24"><path d="M8 6h12M8 12h12M8 18h12"/><circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/></symbol>
+    <symbol id="i-snow" viewBox="0 0 24 24"><path d="M12 3v18M4.2 7.5l15.6 9M4.2 16.5l15.6-9"/></symbol>
+    <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></symbol>
+  </defs>
+</svg>
+
+<header class="s-nav">
+  <div class="s-wrap">
+    <a class="s-brand" href="#top" aria-label="Pay Me Now home"><span class="s-mark"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-nfc"/></svg></span>Pay Me Now</a>
+    <nav class="s-links" aria-label="Sections">
+      <a href="#how">How it works</a><a href="#features">Features</a><a href="#departments">Departments</a><a href="#fair">Fair by design</a><a href="#faq">FAQ</a>
+    </nav>
+    <button class="s-icon-btn" data-act="theme" aria-label="Switch between light and dark theme"><svg class="s-ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-moon"/></svg></button>
+    <a class="s-btn primary" href="#demo">Try the demo</a>
+  </div>
+</header>
+
+<main id="top">
+<section class="s-hero">
+  <div class="s-wrap">
+    <div>
+      <p class="s-eyebrow">For students who work on campus</p>
+      <h1>Paid when the shift <em>ends.</em></h1>
+      <p class="s-lead">Finish a campus job, get approved, and take up to half your pay the same day. Tap your card to check in, tap it again to spend. No interest, ever.</p>
+      <div class="s-cta">
+        <a class="s-btn primary" href="#demo">Try the live demo</a>
+        <a class="s-btn ghost2" href="#how">See how it works</a>
+      </div>
+      <ul class="s-facts">
+        <li><b>£0</b> interest or fees</li>
+        <li>Up to <b>50%</b> early</li>
+        <li><b>92.3%</b> of 39 surveyed students would use it</li>
+      </ul>
+    </div>
+    <div class="s-stagewrap" aria-label="Animated preview of the Pay Me Now app">
+      <div class="s-phone">
+        <div class="notch"></div>
+        <div class="bal"><small>Available now</small><div class="big num" id="hp-bal">£18.00</div><div class="meter"><i id="hp-meter" style="width:0%"></i></div><small id="hp-note" style="display:block;margin-top:8px">Up to 50% of what you have earned</small></div>
+        <div class="feed" id="hp-feed"><div class="r"><span>Welcome week help desk</span><b>+£36.00</b></div></div>
+      </div>
+      <div class="s-float card"><div class="nfc-card" role="img" aria-label="Pay Me Now NFC card"><div class="t"><span>Pay Me Now</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><use href="#i-nfc"/></svg></div><div class="mid"><div class="chipic"></div><span class="num-l num">•••• 4821</span></div><div class="b"><div><b>PRIYA S.</b></div><div>ACTIVE</div></div></div></div>
+      <div class="s-float tag"><i class="led"></i><span id="hp-tag">Reader T-04 online</span></div>
+      <div class="s-tapring" id="hp-ring" aria-hidden="true"><i></i><i></i><i></i></div>
+    </div>
+  </div>
+</section>
+
+<section class="s-section" style="padding-top:40px">
+  <div class="s-wrap">
+    <div class="s-stats">
+      <div><div class="n num">92.3%</div><p>of 39 surveyed students said they would use it</p></div>
+      <div><div class="n num">50%</div><p>of earned pay available the same day</p></div>
+      <div><div class="n num">£0</div><p>interest or fees on early pay</p></div>
+      <div><div class="n num">30 min</div><p>check-in window before each shift</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="s-section alt" id="how">
+  <div class="s-wrap">
+    <div class="s-head"><p class="s-eyebrow">How it works</p><h2 class="s-h2">From accepted shift to money in hand, in four taps.</h2><p class="s-lead">Every step leaves a line in your wallet, so you can always see where your pay is.</p></div>
+    <div class="s-steps">
+      <article class="s-step"><div class="ico"><svg class="s-ic"><use href="#i-cal"/></svg></div><div class="no">STEP 1</div><h3>Accept a job that fits</h3><p>Jobs are checked against your classes and your weekly hours before you can accept.</p><div class="stub">Mon 12:00 to 15:00 · <b>£39.00</b></div></article>
+      <article class="s-step"><div class="ico"><svg class="s-ic"><use href="#i-nfc"/></svg></div><div class="no">STEP 2</div><h3>Tap in and out</h3><p>Hold your card or phone to the reader at the shift. Hours are verified by the tap, not typed in.</p><div class="stub">Tap in <b>11:45</b> · out <b>15:00</b></div></article>
+      <article class="s-step"><div class="ico"><svg class="s-ic"><use href="#i-check"/></svg></div><div class="no">STEP 3</div><h3>Department approves</h3><p>Staff see the tap log next to each task and approve the verified pay in one click.</p><div class="stub">NFC verified · <b>3.0h</b></div></article>
+      <article class="s-step"><div class="ico"><svg class="s-ic"><use href="#i-wallet"/></svg></div><div class="no">STEP 4</div><h3>Spend or withdraw</h3><p>Half of what you have earned is yours now. Tap at the café or send it to your bank.</p><div class="stub">Available now <b>£19.50</b></div></article>
+    </div>
+  </div>
+</section>
+
+<section class="s-section" id="features">
+  <div class="s-wrap">
+    <div class="s-head"><p class="s-eyebrow">Features</p><h2 class="s-h2">One card that clocks you in, pays for lunch and opens the door.</h2></div>
+    <div class="s-bento">
+      <article class="s-tile big">
+        <div class="ico" style="background:rgba(255,255,255,0.12);color:var(--bg)"><svg class="s-ic"><use href="#i-nfc"/></svg></div>
+        <h3>Your NFC card</h3>
+        <p>The same card taps in at your shift, pays at campus readers and opens doors for the shifts you hold. Freeze it in one tap and set a per-tap limit of £10, £25 or £50. On Android Chrome, hold a real NFC tag to your phone to try it.</p>
+        <div class="nfc-card" role="img" aria-label="Pay Me Now NFC card ending 4821"><div class="t"><span>Pay Me Now</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><use href="#i-nfc"/></svg></div><div class="mid"><div class="chipic"></div><span class="num-l num">•••• •••• •••• 4821</span></div><div class="b"><div><div style="opacity:.75">Student wallet</div><b>PRIYA S.</b></div><div>ACTIVE</div></div></div>
+      </article>
+      <article class="s-tile"><div class="ico"><svg class="s-ic"><use href="#i-clock"/></svg></div><h3>Verified hours</h3><p>Late arrivals are flagged and early exits are prorated, so pay matches time worked.</p></article>
+      <article class="s-tile"><div class="ico"><svg class="s-ic"><use href="#i-cal"/></svg></div><h3>Timetable aware</h3><p>A weekly grid shows classes and jobs together. Clashes are blocked before you accept.</p><div class="s-mini" aria-hidden="true"><i class="cl" style="height:60%"></i><i class="cl" style="height:30%"></i><i class="hi" style="height:80%"></i><i class="cl" style="height:45%"></i><i style="height:20%"></i></div></article>
+      <article class="s-tile"><div class="ico"><svg class="s-ic"><use href="#i-shield"/></svg></div><h3>Weekly hours guard</h3><p>Set a limit of 10, 15 or 20 hours. Jobs that would go over it are blocked.</p></article>
+      <article class="s-tile"><div class="ico"><svg class="s-ic"><use href="#i-list"/></svg></div><h3>A clear ledger</h3><p>Every earning, withdrawal and card tap is a line item. No interest is charged on any of them.</p></article>
+      <article class="s-tile"><div class="ico"><svg class="s-ic"><use href="#i-check"/></svg></div><h3>Student perks</h3><p>Earn points for every verified hour and on-time tap. Reach Silver or Gold for 10% or 15% off at Union Café, and redeem free coffee, lunch or a gym day pass.</p></article>
+      <article class="s-tile s-wide"><div class="ico"><svg class="s-ic"><use href="#i-shield"/></svg></div><h3>Shift door access</h3><p>Your card opens the room you are working in from 15 minutes before your shift, and locks again after. Every tap is logged for the department.</p></article>
+    </div>
+  </div>
+</section>
+
+<section class="s-section alt" id="departments">
+  <div class="s-wrap s-split">
+    <div>
+      <p class="s-eyebrow">For departments</p>
+      <h2 class="s-h2">Post a task in a minute. Approve in a click.</h2>
+      <p class="s-lead">The console shows open tasks, who is on shift and what needs approving, with the reader log beside it.</p>
+      <ul class="s-list">
+        <li><svg class="s-ic"><use href="#i-check"/></svg><div><b>Tap-backed approvals</b><span>Each finished shift shows verified hours and whether it was NFC verified or signed off manually.</span></div></li>
+        <li><svg class="s-ic"><use href="#i-check"/></svg><div><b>A float, not a loan</b><span>Early pay is advanced from a university float and recovered from approved pay on payday.</span></div></li>
+        <li><svg class="s-ic"><use href="#i-check"/></svg><div><b>Posted tasks go live at once</b><span>Add a task in the console and it shows in the student app straight away.</span></div></li>
+      </ul>
+    </div>
+    <div class="s-console" aria-label="Department console preview">
+      <div class="bar"><span>Department console</span><span class="pill working">On shift</span></div>
+      <div class="stats"><div class="stat"><b class="num">8</b><span>Open tasks</span></div><div class="stat"><b class="num">1</b><span>To approve</span></div><div class="stat"><b class="num">£36.00</b><span>Paid out</span></div></div>
+      <div class="card"><div class="row c"><b><i class="led"></i>Shift reader</b><span class="sub">Taps from student cards</span></div>
+        <div class="ledger"><div class="l"><div><div>Check-out · Open day stewarding</div><div class="sub">Priya · 15:00 · Full shift</div></div></div><div class="l"><div><div>Check-in · Open day stewarding</div><div class="sub">Priya · 11:45 · On time</div></div></div></div></div>
+      <div class="card"><div class="row c"><b>University float</b><span class="sub num">£19.50 of £250.00</span></div><div class="meter"><i style="width:8%"></i></div></div>
+    </div>
+  </div>
+</section>
+
+<section class="s-section" id="fair">
+  <div class="s-wrap">
+    <div class="s-head"><p class="s-eyebrow">Fair by design</p><h2 class="s-h2">Half now, half on payday. That is the whole deal.</h2><p class="s-lead">Here is a real example from the demo. Earn £36 on a Tuesday shift:</p></div>
+    <div class="s-example">
+      <div class="s-eg"><div class="sub">Earned</div><div class="v">£36.00</div><div class="sub">Welcome week help desk</div></div>
+      <div class="s-eg hl"><div class="sub">Yours the same day</div><div class="v">£18.00</div><div class="sub">Spend by tap or send to your bank</div></div>
+      <div class="s-eg"><div class="sub">Paid on Fri 27 Nov</div><div class="v">£18.00</div><div class="sub">Anything you took early is already deducted</div></div>
+    </div>
+    <div class="s-principles">
+      <div><b>No interest, no fees</b><p>Taking pay early costs nothing. Each withdrawal and tap shows as a line item.</p></div>
+      <div><b>Capped at half</b><p>You can take up to 50% of what you have earned, so payday is never empty.</p></div>
+      <div><b>You stay in control</b><p>Freeze the card, set a per-tap limit and cap your weekly hours.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="s-demo" id="demo">
+  <div class="s-wrap demo-wrap">
+    <div class="s-head" style="margin-bottom:6px"><p class="s-eyebrow">Live demo</p><h2 class="s-h2">Everything here works. Try a full payday.</h2><p class="s-lead">Three screens, one story: a student phone, the department console and a campus reader. Mock data, no real payments.</p></div>
+    <div class="guide" id="guide" aria-label="Walkthrough"></div>
+    <div class="top-actions" style="justify-content:flex-end">
+      <button class="ghost" data-act="theme" id="theme-btn" aria-label="Switch between light and dark theme">Dark mode</button>
+      <button class="ghost" data-act="reset" id="reset-btn">Reset demo</button>
+    </div>
+
+    <section class="clockbar" id="clockbar" aria-label="Demo clock"></section>
+
+    <div class="seg" role="tablist" aria-label="Choose a screen">
+      <button role="tab" id="seg-student" data-act="view" data-v="student" aria-selected="true">Student app</button>
+      <button role="tab" id="seg-dept" data-act="view" data-v="dept" aria-selected="false">Department</button>
+      <button role="tab" id="seg-reader" data-act="view" data-v="reader" aria-selected="false">Campus reader</button>
+    </div>
+
+    <div class="stage">
+      <section class="col on" id="col-student" aria-label="Student app">
+        <div class="col-label"><span>Student app</span><span>Priya (mock student)</span></div>
+        <div class="device">
+          <div class="appbar"><b>Pay Me Now</b><div class="meta"><span id="date-label"></span><span id="bell-slot"></span></div></div>
+          <div class="screen" id="student-screen"></div>
+          <div class="tabs" role="tablist" id="student-tabs"></div>
+          <div id="student-sheet"></div>
+        </div>
+      </section>
+      <section class="col" id="col-dept" aria-label="Department console">
+        <div class="col-label"><span>Department console</span><span>University staff view</span></div>
+        <div class="device">
+          <div class="appbar"><b>Department console</b><div class="meta"><span>Staff</span></div></div>
+          <div class="screen" id="dept-screen"></div>
+        </div>
+      </section>
+      <section class="col" id="col-reader" aria-label="Campus NFC reader">
+        <div class="col-label"><span>Campus NFC reader</span><span>Union Café and Shop</span></div>
+        <div class="device">
+          <div class="appbar"><b>Reader T-04</b><div class="meta"><span><i class="led"></i>Online</span></div></div>
+          <div class="screen" id="reader-screen"></div>
+        </div>
+      </section>
+    </div>
+
+    <div class="foot">
+      <span>Withdrawals and card taps are capped at 50% of earned pay.</span>
+      <span>No interest. Each withdrawal and tap is shown as a line item.</span>
+      <span>Survey (N = 39): 92.3% would use this.</span>
+      <span id="nfc-foot"></span>
+    </div>
+  </div>
+</section>
+
+<section class="s-section alt" id="faq">
+  <div class="s-wrap">
+    <div class="s-head"><p class="s-eyebrow">FAQ</p><h2 class="s-h2">Questions students ask first.</h2></div>
+    <div class="s-faq">
+      <details><summary>Is this real money?</summary><p>No. Pay Me Now is a prototype built for coursework. Every name, job and balance is mock data and nothing moves any real money.</p></details>
+      <details><summary>Does early pay cost anything?</summary><p>No. There is no interest and no fee. You can take up to 50% of what you have earned, and the rest arrives on payday.</p></details>
+      <details><summary>How is early pay funded?</summary><p>In this concept the university advances it from a float, and recovers it from approved pay on payday. The department console shows how much of the float is in use.</p></details>
+      <details><summary>What if I forget to tap?</summary><p>After the shift ends you can ask for a manual sign-off. Staff see it flagged as "No tap" and decide whether to approve it.</p></details>
+      <details><summary>Does NFC work on my phone?</summary><p>On Chrome for Android over HTTPS you can turn on phone NFC under Card controls and hold a real tag to your phone. Everywhere else, taps are simulated so you can still try every step.</p></details>
+      <details><summary>Who made this?</summary><p>Group 2 for the MS994 module, as a clickable prototype and survey project.</p></details>
+    </div>
+  </div>
+</section>
+
+<section class="s-section">
+  <div class="s-wrap">
+    <div class="s-cta-band">
+      <div>
+        <p class="s-eyebrow" style="color:var(--accent)">Take it with you</p>
+        <h2 class="s-h2">Scan to open Pay Me Now on your phone.</h2>
+        <p>Point your camera at the code, or copy the link. The page works for anyone the owner has shared it with.</p>
+        <div class="s-copy"><code id="site-url"></code><button type="button" id="copy-url">Copy link</button></div>
+      </div>
+      <div class="s-qrbox"><div id="qr" role="img" aria-label="QR code that opens Pay Me Now"></div><small>Scan with your camera</small></div>
+    </div>
+  </div>
+</section>
+</main>
+
+<footer class="s-foot">
+  <div class="s-wrap">
+    <p><b style="color:var(--ink)">Pay Me Now</b> is a prototype built for MS994 coursework by Group 2. Mock data, no real payments, and not a financial service.</p>
+    <p>Survey (N = 39): 92.3% would use this.</p>
+  </div>
+</footer>
+<div id="toast" class="toast" role="status" hidden></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+<script>
+
+/* ---------- constants and helpers ---------- */
+const CAP = 0.5;            // share of earned pay that can be taken early
+const FLOAT_MAX = 250;      // university float for instant pay
+const PX = 34, H0 = 8, H1 = 19; // timetable scale
+const PAYDAY = "Fri 27 Nov";
+const DAYNAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri"];
+const DAYIDX = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5 };
+const DATES = { Sun: "8 Nov", Mon: "9 Nov", Tue: "10 Nov", Wed: "11 Nov", Thu: "12 Nov", Fri: "13 Nov" };
+const WORKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri"];
+const LECTURES = { Mon: [[10, 12, "Class"]], Tue: [[9, 11, "Class"], [14, 16, "Class"]], Wed: [[13, 15, "Class"]], Thu: [[10, 12, "Class"]], Fri: [] };
+const SHOP = [
+  { id: "coffee", n: "Flat white", p: 2.8, food: true },
+  { id: "lunch", n: "Lunch meal deal", p: 6.5, food: true },
+  { id: "print", n: "Print credit", p: 10 },
+  { id: "hoodie", n: "Society hoodie", p: 34.99 }
+];
+const TIERS = [{ n: "Bronze", min: 0, disc: 0 }, { n: "Silver", min: 50, disc: 0.10 }, { n: "Gold", min: 120, disc: 0.15 }];
+const REWARDS = [
+  { id: "coffee", label: "Free flat white", cost: 30, item: "coffee" },
+  { id: "lunch", label: "Free lunch meal deal", cost: 60, item: "lunch" },
+  { id: "gym", label: "Sports centre day pass", cost: 50, item: "gym" }
+];
+const ZONES = [
+  { id: "lib", n: "Library main entrance", rule: "always" },
+  { id: "lib3", n: "Library, level 3", rule: "job", loc: "Library, level 3" },
+  { id: "hall", n: "Exhibition hall", rule: "job", loc: "Exhibition hall" },
+  { id: "labs", n: "Engineering labs", rule: "job", loc: "Engineering labs" },
+  { id: "cafe", n: "Union Café stock room", rule: "job", loc: "Union Café" },
+  { id: "gym", n: "Sports centre", rule: "voucher" }
+];
+const NFC_OK = typeof window !== "undefined" && "NDEFReader" in window;
+
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const gbp = n => "£" + n.toFixed(2);
+const money = n => Math.round(n * 100) / 100;
+const pad = n => String(n).padStart(2, "0");
+const fmtT = h => { let m = Math.round((h % 1) * 60), hr = Math.floor(h); if (m === 60) { hr++; m = 0; } return pad(hr % 24) + ":" + pad(m); };
+const absOf = (day, h) => DAYIDX[day] * 24 + h;
+const dayOf = abs => DAYNAMES[Math.max(0, Math.min(5, Math.floor(abs / 24)))];
+const clockShort = abs => dayOf(abs) + " " + DATES[dayOf(abs)] + " · " + fmtT(abs % 24);
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+/* ---------- state ---------- */
+function seed() {
+  return {
+    nextId: 20,
+    tab: "jobs",
+    filter: "all",
+    view: "student",
+    amt: "",
+    clock: 20,           // Sun 8 Nov, 20:00 (absolute hours from Sun 00:00)
+    hoursLimit: 20,
+    draft: { title: "", dept: "Events Office", day: "Mon", start: "10", hours: "2", pay: "26" },
+    jobs: [
+      { id: 1, title: "Open day stewarding", dept: "Admissions", loc: "Main Building foyer", day: "Mon", start: 12, end: 15, pay: 39, status: "open" },
+      { id: 2, title: "Library shelf check", dept: "Library Services", loc: "Library, level 3", day: "Tue", start: 16, end: 18, pay: 26, status: "open" },
+      { id: 3, title: "Exhibition setup", dept: "Events Office", loc: "Exhibition hall", day: "Wed", start: 13, end: 16, pay: 39, status: "open" },
+      { id: 4, title: "Survey data entry", dept: "Business School", loc: "Study room", day: "Thu", start: 13, end: 15, pay: 26, status: "open" },
+      { id: 5, title: "Lab equipment audit", dept: "Engineering", loc: "Engineering labs", day: "Thu", start: 10, end: 12, pay: 26, status: "open" },
+      { id: 6, title: "Careers fair registration desk", dept: "Careers Service", loc: "Careers fair, Hall A", day: "Fri", start: 9, end: 13, pay: 52, status: "open" },
+      { id: 9, title: "Campus tour guide", dept: "Admissions", loc: "Welcome centre", day: "Mon", start: 14, end: 16, pay: 26, status: "open" },
+      { id: 10, title: "Café stock take", dept: "Union Café", loc: "Union Café", day: "Tue", start: 11, end: 13, pay: 26, status: "open" },
+      { id: 11, title: "Evening help desk", dept: "Library Services", loc: "Library, level 1", day: "Wed", start: 17, end: 20, pay: 39, status: "open" },
+      { id: 7, title: "Poster handout", dept: "Marketing", loc: "Concourse", day: "Fri", start: 13, end: 16, pay: 39, status: "done", past: "Fri 6 Nov", verified: 3, verifiedPay: 39, proof: "nfc", proofTxt: "Tap in 13:02 · out 16:00" },
+      { id: 8, title: "Welcome week help desk", dept: "Student Experience", loc: "Welcome centre", day: "Tue", start: 10, end: 13, pay: 36, status: "paid", past: "Tue 3 Nov", paidAmt: 36 }
+    ],
+    ledger: [{ t: "Tue 3 Nov", label: "Welcome week help desk", amount: 36, kind: "earn" }],
+    withdrawn: 0,            // everything taken early: bank withdrawals and card taps
+    card: { frozen: false, limit: 25, sound: true, real: false },
+    term: { mode: "till", pending: null, door: null, status: "idle", msg: "", last: null, sales: [] },
+    jobsView: "list", ptsBonus: 0, ptsSpent: 0, streak: 0, saved: 0, tier: "Bronze", vouchers: [], accessLog: [],
+    readerLog: [],
+    notifs: [{ t: "Sun 8 Nov · 19:40", msg: "Welcome to Pay Me Now. Your NFC card is ready to use.", read: false }],
+    sheet: null, sheetAmt: 0, sheetBusy: false, tapMsg: "", tapReal: false,
+    toast: null
+  };
+}
+let S = seed();
+
+/* ---------- derived values ---------- */
+const startAbs = j => absOf(j.day, j.start);
+const endAbs = j => absOf(j.day, j.end);
+const dur = j => j.end - j.start;
+const live = j => ["accepted", "working", "done", "paid"].includes(j.status) && !j.past;
+const weekHours = () => S.jobs.filter(live).reduce((a, j) => a + dur(j), 0);
+const earned = () => money(S.ledger.filter(l => l.kind === "earn").reduce((a, l) => a + l.amount, 0));
+const available = () => Math.max(0, Math.floor((earned() * CAP - S.withdrawn) * 100 + 1e-6) / 100);
+const pending = () => money(S.jobs.filter(j => j.status === "done").reduce((a, j) => a + (j.verifiedPay ?? j.pay), 0));
+const upcoming = () => money(S.jobs.filter(j => j.status === "accepted" || j.status === "working").reduce((a, j) => a + j.pay, 0));
+const when = j => j.past ? j.past : j.day + " " + DATES[j.day];
+const lectureClash = j => (LECTURES[j.day] || []).find(l => j.start < l[1] && j.end > l[0]);
+const jobClash = j => S.jobs.find(o => o.id !== j.id && live(o) && o.day === j.day && j.start < o.end && j.end > o.start);
+const blocker = j => {
+  const l = lectureClash(j); if (l) return "Clashes with " + fmtT(l[0]) + " class";
+  const o = jobClash(j); if (o) return "Overlaps another job";
+  if (weekHours() + dur(j) > S.hoursLimit) return "Over your " + S.hoursLimit + "h weekly limit";
+  return null;
+};
+const hourPoints = () => Math.floor(S.jobs.filter(j => !j.past && (j.status === "done" || j.status === "paid")).reduce((a, j) => a + (j.verified || 0), 0)) * 10;
+const lifetime = () => 20 + S.ptsBonus + hourPoints();
+const points = () => lifetime() - S.ptsSpent;
+const tierOf = () => TIERS.slice().reverse().find(t => lifetime() >= t.min);
+const nextTier = () => TIERS.find(t => t.min > lifetime());
+const zoneOf = id => ZONES.find(z => z.id === id);
+function priceFor(item) {
+  const v = S.vouchers.findIndex(x => x.item === item.id);
+  if (v >= 0) return { final: 0, note: "Voucher applied", voucher: v };
+  const d = tierOf().disc;
+  if (d > 0 && item.food) return { final: money(item.p * (1 - d)), note: "Student price −" + Math.round(d * 100) + "%" };
+  return { final: item.p, note: "" };
+}
+function accessFor(z) {
+  if (S.card.frozen) return { ok: false, why: "Card frozen" };
+  if (z.rule === "always") return { ok: true, why: "Student access" };
+  if (z.rule === "job") {
+    const j = S.jobs.find(j => live(j) && (j.status === "accepted" || j.status === "working") && j.loc === z.loc && S.clock >= startAbs(j) - 0.25 && S.clock <= endAbs(j) + 0.25);
+    return j ? { ok: true, why: "Shift access: " + j.title } : { ok: false, why: "Needs an active shift here (opens 15 min before)" };
+  }
+  const i = S.vouchers.findIndex(v => v.item === "gym");
+  return i >= 0 ? { ok: true, why: "Day pass used", voucher: i } : { ok: false, why: "No day pass. Redeem one in Perks." };
+}
+function checkTier() {
+  const t = tierOf();
+  if (t.n !== S.tier) { S.tier = t.n; if (t.disc > 0) note("You reached " + t.n + ". " + Math.round(t.disc * 100) + "% off food and drink at Union Café now applies."); }
+}
+const unread = () => S.notifs.filter(n => !n.read).length;
+function note(msg) { S.notifs.unshift({ t: clockShort(S.clock), msg, read: false }); S.notifs = S.notifs.slice(0, 30); }
+
+/* ---------- sound, haptics, NFC ---------- */
+let AC;
+function beep(ok) {
+  if (S.card.sound) {
+    try {
+      AC = AC || new (window.AudioContext || window.webkitAudioContext)();
+      const o = AC.createOscillator(), g = AC.createGain(), t = AC.currentTime;
+      o.type = "sine"; o.frequency.value = ok ? 1175 : 196;
+      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.16, t + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + (ok ? 0.22 : 0.45));
+      o.connect(g); g.connect(AC.destination); o.start(t); o.stop(t + 0.5);
+    } catch (e) { /* audio is optional */ }
+    try { if (navigator.vibrate) navigator.vibrate(ok ? [40, 50, 40] : [160]); } catch (e) { /* haptics optional */ }
+  }
+}
+let tapCtl = null;
+function realScan(ctl) {
+  return new Promise(async res => {
+    let done = false;
+    const fin = v => { if (!done) { done = true; res(v); } };
+    try {
+      const r = new NDEFReader();
+      ctl.ctrl = new AbortController();
+      ctl.ctrl.signal.addEventListener("abort", () => fin(false));
+      await r.scan({ signal: ctl.ctrl.signal });
+      r.onreading = () => fin(true);
+      r.onreadingerror = () => fin(false);
+      setTimeout(() => fin(false), 20000);
+    } catch (e) { fin(null); }   // null means "could not start, fall back"
+  });
+}
+async function nfcTap(msg) {
+  if (S.sheet === "tap") return false;
+  const ctl = tapCtl = { cancelled: false, ctrl: null };
+  S.sheet = "tap"; S.tapMsg = msg; S.tapReal = !!(S.card.real && NFC_OK); render();
+  let ok;
+  if (S.tapReal) { ok = await realScan(ctl); if (ok === null) { toast("Phone NFC could not start, using a simulated tap."); ok = undefined; } }
+  if (!S.tapReal || ok === undefined) { await sleep(1100); ok = !ctl.cancelled; }
+  if (S.sheet === "tap") S.sheet = null;
+  tapCtl = null; render();
+  return ok;
+}
+
+/* ---------- small SVG ---------- */
+const ICON_NFC = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 8.5a5 5 0 0 1 0 7"/><path d="M10 6a8.5 8.5 0 0 1 0 12"/><path d="M14 3.5a12 12 0 0 1 0 17"/></svg>`;
+const ICON_BELL = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9a6 6 0 1 1 12 0c0 6 2 7 2 7H4s2-1 2-7"/><path d="M10 20a2 2 0 0 0 4 0"/></svg>`;
+const wavesHTML = `<div class="waves" aria-hidden="true"><i></i><i></i><i></i><div class="core">${ICON_NFC}</div></div>`;
+
+/* ---------- student screens ---------- */
+function jobCard(j) {
+  const why = blocker(j), h = dur(j);
+  return `<article class="card">
+    <div class="row"><div><h3>${esc(j.title)}</h3><div class="sub">${esc(j.dept)} · ${esc(j.loc || "")}</div></div><div class="pay num">${gbp(j.pay)}</div></div>
+    <div class="sub num">${when(j)} · ${fmtT(j.start)} to ${fmtT(j.end)} · ${h}h</div>
+    <div class="row c">
+      ${why ? `<span class="pill clash">${esc(why)}</span>` : `<span class="pill fit">Fits your timetable</span>`}
+      <button class="btn" data-act="accept" data-id="${j.id}" ${why ? "disabled" : ""}>Accept</button>
+    </div>
+  </article>`;
+}
+function renderJobs() {
+  let list = S.jobs.filter(j => j.status === "open");
+  if (S.filter === "fit") list = list.filter(j => !blocker(j));
+  if (S.filter === "short") list = list.filter(j => dur(j) <= 2);
+  const wh = weekHours(), pct = Math.min(100, (wh / S.hoursLimit) * 100);
+  const chips = [["all", "All jobs"], ["fit", "Fits my timetable"], ["short", "2 hours or less"]]
+    .map(([k, l]) => `<button class="chip" data-act="filter" data-v="${k}" aria-pressed="${S.filter === k}">${l}</button>`).join("");
+  return `<div class="card">
+      <div class="row c"><b>Hours booked this week</b><span class="sub num">${wh}h of ${S.hoursLimit}h</span></div>
+      <div class="meter ${pct >= 85 ? "warn" : ""}" role="img" aria-label="${wh} of ${S.hoursLimit} weekly hours booked"><i style="width:${pct}%"></i></div>
+    </div>
+    <div class="chips">${chips}</div>
+    ${list.length ? list.map(jobCard).join("") : `<div class="empty">No open jobs match this filter.</div>`}`;
+}
+function workCard(j) {
+  const pill = {
+    accepted: `<span class="pill accepted">Accepted</span>`,
+    working: `<span class="pill working">On shift</span>`,
+    done: `<span class="pill done">Waiting for approval</span>`,
+    paid: `<span class="pill paid">Paid into wallet</span>`
+  }[j.status];
+  let extra = "", action = "";
+  if (j.status === "accepted") {
+    const opens = startAbs(j) - 0.5;
+    extra = `<div class="sub">Check-in opens ${clockShort(opens)} at the ${esc(j.loc || "shift")} reader.</div>`;
+    action = `<button class="btn" data-act="checkin" data-id="${j.id}">Tap to check in</button>`;
+    extra += `<div class="row c"><button class="link" data-act="jump" data-id="${j.id}" data-v="start">Demo: jump clock to shift start</button>${S.clock >= endAbs(j) ? `<button class="link" data-act="manual" data-id="${j.id}">Forgot to tap?</button>` : ""}</div>`;
+  } else if (j.status === "working") {
+    extra = `<div class="sub num">Checked in at ${fmtT(j.checkIn % 24)}. Shift ends ${fmtT(j.end)}.</div>
+      <div class="row c"><button class="link" data-act="jump" data-id="${j.id}" data-v="end">Demo: jump clock to shift end</button></div>`;
+    action = `<button class="btn alt" data-act="checkout" data-id="${j.id}">Tap to check out</button>`;
+  } else if (j.status === "done") {
+    extra = `<div class="sub num">Verified ${j.verified.toFixed(1)}h · ${gbp(j.verifiedPay ?? j.pay)} · ${esc(j.proof === "nfc" ? j.proofTxt : "Manual sign-off, no tap")}</div>`;
+  }
+  return `<article class="card">
+      <div class="row"><div><h3>${esc(j.title)}</h3><div class="sub">${esc(j.dept)}</div></div><div class="pay num">${gbp(j.pay)}</div></div>
+      <div class="sub num">${when(j)} · ${fmtT(j.start)} to ${fmtT(j.end)}</div>
+      ${extra}
+      <div class="row c">${pill}${action}</div>
+    </article>`;
+}
+function renderJobsTab() {
+  const t = [["list", "List"], ["week", "Week"]].map(([k, l]) => `<button class="chip" data-act="jobsview" data-v="${k}" aria-pressed="${S.jobsView === k}">${l}</button>`).join("");
+  return `<div class="chips">${t}</div>` + (S.jobsView === "week" ? renderWeek() : renderJobs());
+}
+function renderWork() {
+  const mine = S.jobs.filter(j => j.status !== "open");
+  if (!mine.length) return `<div class="empty">Accepted jobs appear here.</div>`;
+  const order = { working: 0, accepted: 1, done: 2, paid: 3 };
+  return mine.slice().sort((a, b) => order[a.status] - order[b.status]).map(workCard).join("");
+}
+function renderWeek() {
+  const rows = H1 - H0, now = S.clock, nd = dayOf(now);
+  const times = Array.from({ length: rows + 1 }, (_, i) => `<span style="top:${i * PX}px">${pad(H0 + i)}</span>`).join("");
+  const cols = WORKDAYS.map(d => {
+    const blocks = (LECTURES[d] || []).map(l => `<div class="blk class" style="top:${(l[0] - H0) * PX}px;height:${(l[1] - l[0]) * PX - 2}px" title="${l[2]} ${fmtT(l[0])} to ${fmtT(l[1])}">${l[2]}</div>`).join("")
+      + S.jobs.filter(j => live(j) && j.day === d).map(j => `<div class="blk ${j.status}" style="top:${(j.start - H0) * PX}px;height:${dur(j) * PX - 2}px" title="${esc(j.title)} ${fmtT(j.start)} to ${fmtT(j.end)}">${esc(j.title)}</div>`).join("");
+    const t = now % 24, line = (nd === d && t >= H0 && t <= H1) ? `<div class="now" style="top:${(t - H0) * PX}px"></div>` : "";
+    return `<div class="tcol ${nd === d ? "today" : ""}">${blocks}${line}</div>`;
+  }).join("");
+  const wh = weekHours(), pct = Math.min(100, (wh / S.hoursLimit) * 100);
+  const limits = [10, 15, 20].map(v => `<option value="${v}" ${S.hoursLimit === v ? "selected" : ""}>${v} hours</option>`).join("");
+  return `<div class="tt" style="--rows:${rows};--px:${PX}px">
+      <div></div>${WORKDAYS.map(d => `<div class="dh">${d}</div>`).join("")}
+      <div class="times">${times}</div>${cols}
+    </div>
+    <div class="legend"><span>Class</span><span class="a">Accepted</span><span class="w">On shift or paid</span><span class="d">Awaiting approval</span></div>
+    <div class="card">
+      <div class="row c"><b>Weekly hours guard</b><span class="sub num">${wh}h of ${S.hoursLimit}h</span></div>
+      <div class="meter ${pct >= 85 ? "warn" : ""}"><i style="width:${pct}%"></i></div>
+      <div class="field"><label for="hl">Your weekly limit</label><select id="hl" data-chg="hlimit">${limits}</select></div>
+      <div class="note">Jobs that would take you over the limit are blocked. Some student visas cap term-time work (often 20 hours a week), so set whatever applies to you.</div>
+    </div>`;
+}
+function renderWallet() {
+  const e = earned(), cap = money(e * CAP), av = available();
+  const pct = cap > 0 ? Math.min(100, (S.withdrawn / cap) * 100) : 0;
+  const amts = [5, 10].filter(a => a <= av).map(a => `<button class="chip" data-act="amt" data-v="${a}">£${a}</button>`).join("")
+    + (av > 0 ? `<button class="chip" data-act="amt" data-v="${av}">Max ${gbp(av)}</button>` : "");
+  const ledger = S.ledger.slice().reverse().map(l => {
+    const tag = l.kind === "out" ? " · bank, no interest" : l.kind === "card" ? " · contactless" : "";
+    return `<div class="l"><div><div>${esc(l.label)}</div><div class="sub">${esc(l.t)}${tag}</div></div>
+    <div class="${l.kind === "earn" ? "plus" : "minus"} num">${l.kind === "earn" ? "+" : "−"}${gbp(l.amount)}</div></div>`;
+  }).join("");
+  return `<div class="hero"><small>Available now, to spend or withdraw</small><div class="big num">${gbp(av)}</div><small>Up to 50% of what you have earned</small></div>
+    <div class="stats">
+      <div class="stat"><b class="num">${gbp(e)}</b><span>Earned</span></div>
+      <div class="stat"><b class="num">${gbp(S.withdrawn)}</b><span>Taken early</span></div>
+      <div class="stat"><b class="num">${gbp(money(e - S.withdrawn))}</b><span>Paid on ${PAYDAY}</span></div>
+    </div>
+    <div class="stats">
+      <div class="stat" style="grid-column: span 2"><b class="num">${gbp(pending())}</b><span>Waiting for department approval</span></div>
+      <div class="stat"><b class="num">${gbp(upcoming())}</b><span>Booked</span></div>
+    </div>
+    <div class="card">
+      <div class="row c"><b>Early-pay limit used</b><span class="sub num">${gbp(S.withdrawn)} of ${gbp(cap)}</span></div>
+      <div class="meter" role="img" aria-label="${Math.round(pct)}% of the early-pay limit used"><i style="width:${pct}%"></i></div>
+      <div class="amounts">${amts || `<span class="note">Nothing to withdraw yet. Finish a job to earn.</span>`}</div>
+      <div class="row" style="align-items:flex-end">
+        <div class="field"><label for="amt-input">Amount (£)</label><input id="amt-input" class="num" type="number" min="0" step="0.01" inputmode="decimal" value="${esc(S.amt)}" placeholder="0.00" data-draft-amt></div>
+        <button class="btn" data-act="withdraw">Withdraw to bank</button>
+      </div>
+      <div class="note">No interest. The rest of your earnings arrive on ${PAYDAY}, and each withdrawal or card tap shows as a line item.</div>
+    </div>
+    <h4>Activity</h4><div class="ledger">${ledger}</div>`;
+}
+function renderPerks() {
+  const t = tierOf(), nx = nextTier(), life = lifetime(), pts = points();
+  const prog = nx ? Math.min(100, ((life - t.min) / (nx.min - t.min)) * 100) : 100;
+  const benefits = [
+    ["No-fee early pay", "Take up to 50% of earned pay with no interest", 0],
+    ["Shift door access", "Your card opens the room you are working in, from 15 minutes before your shift", 0],
+    ["Silver student price", "10% off food and drink at Union Café", 50],
+    ["Gold student price", "15% off food and drink at Union Café", 120]
+  ].map(([a, b, min]) => `<div class="row c"><div><b>${a}</b><div class="sub">${b}</div></div><span class="pill ${life >= min ? "fit" : "open"}">${life >= min ? "Unlocked" : min + " pts"}</span></div>`).join("");
+  const rewards = REWARDS.map(r => `<div class="row c"><div><b>${r.label}</b><div class="sub num">${r.cost} points</div></div>
+    <button class="btn sm" data-act="redeem" data-id="${r.id}" ${pts < r.cost ? "disabled" : ""}>Redeem</button></div>`).join("");
+  const vouchers = S.vouchers.length ? S.vouchers.map(v => `<span class="pill accepted">${esc(v.label)}</span>`).join(" ") : `<span class="note">No vouchers yet.</span>`;
+  return `<div class="hero"><small>Perks level</small><div class="big">${t.n}</div>
+      <small class="num">${pts} points to spend · ${life} earned in total</small>
+      <div class="meter" style="background:rgba(255,255,255,0.2)" role="img" aria-label="${Math.round(prog)}% of the way to the next level"><i style="width:${prog}%"></i></div>
+      <small>${nx ? (nx.min - life) + " points to " + nx.n : "Top level reached"}</small></div>
+    <div class="stats">
+      <div class="stat"><b class="num">${S.streak}</b><span>On-time streak</span></div>
+      <div class="stat"><b class="num">${gbp(S.saved)}</b><span>Saved with perks</span></div>
+      <div class="stat"><b class="num">${S.vouchers.length}</b><span>Vouchers</span></div>
+    </div>
+    <div class="card"><h3>How you earn points</h3><div class="note">10 points for every verified hour worked, and 5 bonus points for each on-time check-in. Everyone starts with 20.</div></div>
+    <div class="card"><h3>Your benefits</h3>${benefits}</div>
+    <div class="card"><h3>Rewards</h3>${rewards}<div class="amounts">${vouchers}</div>
+      <div class="note">Vouchers apply automatically: food vouchers at the Union Café till, and the day pass at the Sports centre door.</div></div>`;
+}
+function renderCard() {
+  const c = S.card, T = S.term, av = available();
+  const recent = S.ledger.filter(l => l.kind === "card").slice(-4).reverse()
+    .map(l => `<div class="l"><div><div>${esc(l.label)}</div><div class="sub">${esc(l.t)}</div></div><div class="minus num">−${gbp(l.amount)}</div></div>`).join("");
+  let reader;
+  if (T.mode === "till" && T.pending) {
+    const pr = priceFor(T.pending);
+    reader = `<div class="row c"><div><b>${esc(T.pending.n)}</b><div class="sub">Union Café and Shop is asking for payment${pr.note ? " · " + esc(pr.note) : ""}</div></div><div class="pay num">${gbp(pr.final)}</div></div>
+       <button class="btn" data-act="pay" data-autofocus>Tap card on reader</button>`;
+  } else if (T.mode === "door" && T.door && T.status === "waiting") {
+    const z = zoneOf(T.door), a = accessFor(z);
+    reader = `<div class="row c"><div><b>${esc(z.n)}</b><div class="sub">The door reader is waiting for your card</div></div><span class="pill ${a.ok ? "fit" : "clash"}">${a.ok ? "Allowed" : "Not allowed"}</span></div>
+       <button class="btn" data-act="enter" data-autofocus>Tap card to enter</button>`;
+  } else {
+    reader = `<div class="note">No reader is waiting. On the Campus reader screen, start a sale on the Till or stand at a door, then come back here to tap.</div>
+       <button class="btn" disabled>Tap card on reader</button>`;
+  }
+  const doors = ZONES.map(z => { const a = accessFor(z); return `<div class="row c"><div><b>${esc(z.n)}</b><div class="sub">${esc(a.ok ? a.why : a.why)}</div></div><span class="pill ${a.ok ? "fit" : "open"}">${a.ok ? "Open now" : "Locked"}</span></div>`; }).join("");
+  const log = S.accessLog.slice(0, 4).map(l => `<div class="l"><div><div>${l.ok ? "Entered" : "Denied"} · ${esc(l.zone)}</div><div class="sub">${esc(l.t)} · ${esc(l.why)}</div></div></div>`).join("");
+  const sw = (id, title, desc, on, dis) => `<div class="row c"><div><b>${title}</b><div class="sub">${desc}</div></div>
+    <button class="switch" role="switch" aria-checked="${on}" aria-label="${title}" data-act="${id}" ${dis ? "disabled" : ""}></button></div>`;
+  return `<div class="nfc-card ${c.frozen ? "frozen" : ""}" role="img" aria-label="Pay Me Now student card ending 4821, ${c.frozen ? "frozen" : "active"}">
+      <div class="t"><span>Pay Me Now</span>${ICON_NFC}</div>
+      <div class="mid"><div class="chipic"></div><span class="num-l num">•••• •••• •••• 4821</span></div>
+      <div class="b"><div><div style="opacity:.75">Student wallet · ${tierOf().n}</div><b>PRIYA S.</b></div><div>${c.frozen ? "FROZEN" : "ACTIVE"}</div></div>
+    </div>
+    <div class="row c"><div><div class="sub">Available to spend</div><div class="pay num">${gbp(av)}</div></div>
+      <span class="pill ${c.frozen ? "clash" : "fit"}">${c.frozen ? "Card frozen" : "Contactless on"}</span></div>
+    <div class="card"><h3>At a reader</h3>${reader}</div>
+    <div class="card"><h3>Where this card opens doors</h3>${doors}
+      <div class="note">Room access follows your shifts. It opens 15 minutes before you start and closes 15 minutes after you finish.</div></div>
+    <h4>Access history</h4><div class="ledger">${log || `<div class="note">No door taps yet.</div>`}</div>
+    <div class="card"><h3>Card controls</h3>
+      ${sw("freeze", "Freeze card", "Blocks every tap and door straight away", c.frozen, false)}
+      <div class="row c"><div><b>Per-tap limit</b><div class="sub">Payments above this are declined</div></div>
+        <select data-chg="limit" aria-label="Per-tap limit">${[10, 25, 50].map(v => `<option value="${v}" ${c.limit === v ? "selected" : ""}>£${v}</option>`).join("")}</select></div>
+      ${sw("sound", "Sound and haptics", "A beep and buzz on every tap", c.sound, false)}
+      ${sw("real", "Use my phone's NFC", NFC_OK ? "Hold any NFC tag to your phone to tap" : "Not supported in this browser, taps are simulated", c.real && NFC_OK, !NFC_OK)}
+    </div>
+    <h4>Recent card payments</h4>
+    <div class="ledger">${recent || `<div class="note">No card payments yet.</div>`}</div>`;
+}
+function renderStudent() {
+  const waiting = S.jobs.filter(j => j.status === "accepted" || j.status === "working").length;
+  const tabs = [["jobs", "Jobs"], ["work", "My work"], ["wallet", "Wallet"], ["perks", "Perks"], ["card", "Card"]].map(([k, l]) =>
+    `<button role="tab" data-act="tab" data-v="${k}" aria-selected="${S.tab === k}">${l}${k === "work" && waiting ? `<span class="badge-count">${waiting}</span>` : ""}</button>`).join("");
+  document.getElementById("student-tabs").innerHTML = tabs;
+  const T = S.term;
+  const ask = T.mode === "till" ? (T.pending ? "Union Café asks for " + gbp(priceFor(T.pending).final) : "") : (T.door && T.status === "waiting" ? "Door reader: " + zoneOf(T.door).n : "");
+  const banner = ask && S.tab !== "card" ? `<div class="banner"><span>${esc(ask)}</span><button class="btn sm" data-act="tab" data-v="card">Tap</button></div>` : "";
+  const body = { jobs: renderJobsTab, work: renderWork, wallet: renderWallet, perks: renderPerks, card: renderCard }[S.tab]();
+  document.getElementById("student-screen").innerHTML = banner + body;
+  document.getElementById("date-label").textContent = clockShort(S.clock);
+  const n = unread();
+  document.getElementById("bell-slot").innerHTML = `<button class="bell" data-act="bell" aria-label="Notifications, ${n} unread">${ICON_BELL}${n ? `<span class="dot">${n}</span>` : ""}</button>`;
+  renderSheet();
+}
+function renderSheet() {
+  const el = document.getElementById("student-sheet");
+  let inner = "";
+  if (S.sheet === "tap") {
+    inner = `<div class="sheet" role="dialog" aria-modal="true" aria-label="Contactless tap" style="align-items:center;text-align:center">
+      <h3>${S.tapReal ? "Hold an NFC tag to your phone" : "Hold near the reader"}</h3>${wavesHTML}
+      <div class="sub">${esc(S.tapMsg)}</div>
+      <button class="btn line" data-act="cancelTap" data-autofocus>Cancel</button></div>`;
+  } else if (S.sheet === "notifs") {
+    const list = S.notifs.map(n => `<div class="notif"><span class="dot ${n.read ? "read" : ""}"></span><div><div>${esc(n.msg)}</div><div class="sub">${esc(n.t)}</div></div></div>`).join("");
+    inner = `<div class="sheet" role="dialog" aria-modal="true" aria-label="Notifications"><div class="row c"><h3>Notifications</h3><button class="btn line sm" data-act="closeSheet" data-autofocus>Close</button></div>${list || `<div class="empty">Nothing yet.</div>`}</div>`;
+  } else if (S.sheet === "withdraw") {
+    const v = S.sheetAmt, left = money(available() - v);
+    inner = `<div class="sheet" role="dialog" aria-modal="true" aria-label="Confirm withdrawal"><h3>Confirm withdrawal</h3>
+      <div class="card">
+        <div class="row"><span class="sub">Amount</span><b class="num">${gbp(v)}</b></div>
+        <div class="row"><span class="sub">To</span><b>Bank account ••• 1234</b></div>
+        <div class="row"><span class="sub">Speed</span><b>Instant (Faster Payments)</b></div>
+        <div class="row"><span class="sub">Fee and interest</span><b>£0.00</b></div>
+        <div class="row"><span class="sub">Still available after</span><b class="num">${gbp(left)}</b></div>
+        <div class="row"><span class="sub">Taken from your ${PAYDAY} pay</span><b class="num">${gbp(v)}</b></div>
+      </div>
+      <button class="btn" data-act="confirmWithdraw" data-autofocus ${S.sheetBusy ? "disabled" : ""}>${S.sheetBusy ? "Checking fingerprint…" : "Confirm with fingerprint"}</button>
+      <button class="btn line" data-act="closeSheet" ${S.sheetBusy ? "disabled" : ""}>Cancel</button></div>`;
+  }
+  el.innerHTML = inner ? `<div class="sheet-wrap">${inner}</div>` : "";
+  const f = el.querySelector("[data-autofocus]");
+  if (f && !el.dataset.focused) { f.focus(); }
+  el.dataset.focused = inner ? "1" : "";
+}
+
+/* ---------- department console ---------- */
+function renderDept() {
+  const d = S.draft;
+  const opt = (arr, cur) => arr.map(([v, l]) => `<option value="${v}" ${String(cur) === String(v) ? "selected" : ""}>${l}</option>`).join("");
+  const dayOpts = WORKDAYS.map(k => [k, `${k} ${DATES[k]}`]);
+  const startOpts = [8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18].map(h => [h, fmtT(h)]);
+  const hourOpts = [1, 2, 3, 4].map(h => [h, h + (h === 1 ? " hour" : " hours")]);
+  const open = S.jobs.filter(j => j.status === "open").length;
+  const wait = S.jobs.filter(j => j.status === "done").length;
+  const paid = money(S.jobs.filter(j => j.status === "paid").reduce((a, j) => a + (j.paidAmt ?? j.pay), 0));
+  const rank = { done: 0, working: 1, accepted: 2, open: 3, paid: 4 };
+  const sorted = S.jobs.slice().sort((a, b) => rank[a.status] - rank[b.status]);
+  const label = { open: "Open", accepted: "Accepted by Priya", working: "On shift", done: "Done, needs approval", paid: "Paid" };
+  const rows = sorted.map(j => {
+    const due = j.verifiedPay ?? j.pay;
+    const proof = j.status === "done" ? (j.proof === "nfc" ? `<span class="pill nfc">NFC verified</span>` : `<span class="pill manual">Manual sign-off</span>`) : "";
+    const detail = j.status === "done" ? `<div class="sub num">${j.verified.toFixed(1)}h verified · ${esc(j.proof === "nfc" ? j.proofTxt : "No tap recorded, check with the student")}</div>` : "";
+    return `<article class="card">
+      <div class="row"><div><h3>${esc(j.title)}</h3><div class="sub">${esc(j.dept)} · ${when(j)} · ${fmtT(j.start)} to ${fmtT(j.end)}</div></div><div class="pay num">${gbp(j.status === "done" ? due : (j.paidAmt ?? j.pay))}</div></div>
+      ${detail}
+      <div class="row c"><div style="display:flex;gap:6px;flex-wrap:wrap"><span class="pill ${j.status}">${label[j.status]}</span>${proof}</div>
+      ${j.status === "done" ? `<button class="btn" data-act="approve" data-id="${j.id}">Approve and pay</button>` : ""}</div>
+    </article>`;
+  }).join("");
+  const log = S.readerLog.slice(0, 4).map(l => `<div class="l"><div><div>${esc(l.ev)} · ${esc(l.job)}</div><div class="sub">${esc(l.who)} · ${esc(l.t)}${l.flag ? " · " + esc(l.flag) : ""}</div></div></div>`).join("");
+  const fp = Math.min(100, (S.withdrawn / FLOAT_MAX) * 100);
+  document.getElementById("dept-screen").innerHTML = `
+    <div class="stats">
+      <div class="stat"><b class="num">${open}</b><span>Open tasks</span></div>
+      <div class="stat"><b class="num">${wait}</b><span>To approve</span></div>
+      <div class="stat"><b class="num">${gbp(paid)}</b><span>Paid out</span></div>
+    </div>
+    <div class="card"><div class="row c"><b><i class="led"></i>Shift reader</b><span class="sub">Taps from student cards</span></div>
+      <div class="ledger">${log || `<div class="note">No taps yet. Accept a job and tap in on the student app.</div>`}</div></div>
+    <div class="card"><div class="row c"><b>Door access</b><span class="sub">Opens only during a student's shift</span></div>
+      <div class="ledger">${S.accessLog.slice(0, 3).map(l => `<div class="l"><div><div>${l.ok ? "Entered" : "Denied"} · ${esc(l.zone)}</div><div class="sub">Priya · ${esc(l.t)} · ${esc(l.why)}</div></div></div>`).join("") || `<div class="note">No door taps yet.</div>`}</div></div>
+    <div class="card"><div class="row c"><b>University float</b><span class="sub num">${gbp(S.withdrawn)} of ${gbp(FLOAT_MAX)}</span></div>
+      <div class="meter ${fp >= 85 ? "warn" : ""}" role="img" aria-label="${Math.round(fp)}% of the float is in use"><i style="width:${fp}%"></i></div>
+      <div class="note">Early withdrawals and card taps are advanced from this float and recovered from approved pay on ${PAYDAY}.</div></div>
+    <h4>Post a task</h4>
+    <form class="card" id="post-form" autocomplete="off">
+      <div class="form-grid">
+        <div class="field wide"><label for="f-title">Task</label><input id="f-title" data-draft="title" value="${esc(d.title)}" placeholder="e.g. Stuff 200 welcome packs" maxlength="60"></div>
+        <div class="field wide"><label for="f-dept">Department</label><input id="f-dept" data-draft="dept" value="${esc(d.dept)}" maxlength="40"></div>
+        <div class="field"><label for="f-day">Day</label><select id="f-day" data-draft="day">${opt(dayOpts, d.day)}</select></div>
+        <div class="field"><label for="f-start">Start</label><select id="f-start" data-draft="start">${opt(startOpts, d.start)}</select></div>
+        <div class="field"><label for="f-hours">Length</label><select id="f-hours" data-draft="hours">${opt(hourOpts, d.hours)}</select></div>
+        <div class="field"><label for="f-pay">Pay (£)</label><input id="f-pay" class="num" type="number" min="1" step="0.5" data-draft="pay" value="${esc(d.pay)}"></div>
+      </div>
+      <button class="btn" type="submit">Post task</button>
+    </form>
+    <h4>All tasks</h4>${rows}`;
+}
+
+/* ---------- campus reader ---------- */
+function renderReader() {
+  const T = S.term, p = T.pending, l = T.last;
+  const modeBar = `<div class="chips">${[["till", "Till"], ["door", "Door"]].map(([k, n]) => `<button class="chip" data-act="rmode" data-v="${k}" aria-pressed="${T.mode === k}">${n}</button>`).join("")}</div>`;
+  let html = modeBar;
+  if (T.mode === "till") {
+    let disp = `<div class="t-display"><small>Ready</small><div class="big">${gbp(0)}</div><div>Choose an item to start a sale</div></div>`;
+    if (T.status === "waiting" && p) disp = `<div class="t-display"><small>Amount due</small><div class="big num">${gbp(p.p)}</div><div>${esc(p.n)}</div>${wavesHTML}<div>Present card or phone</div></div>`;
+    if (T.status === "approved" && l) disp = `<div class="t-display ok" role="status"><small>Approved</small><div class="big num">${gbp(l.p)}</div><div>${esc(l.n)} · Contactless</div>${l.note ? `<div>${esc(l.note)}</div>` : ""}</div>`;
+    if (T.status === "declined" && l) disp = `<div class="t-display no" role="status"><small>Declined</small><div class="big num">${gbp(l.p)}</div><div>${esc(T.msg)}</div></div>`;
+    const busy = T.status === "waiting";
+    const tiles = SHOP.map(i => `<button class="tile" data-act="sale" data-id="${i.id}" ${busy ? "disabled" : ""}><b>${esc(i.n)}</b><span class="sub num">${gbp(i.p)}</span></button>`).join("");
+    const total = money(T.sales.reduce((a, s) => a + s.p, 0));
+    const sales = T.sales.slice(0, 4).map(s => `<div class="l"><div><div>${esc(s.n)}</div><div class="sub">${esc(s.t)} · card ending 4821</div></div><div class="plus num">${gbp(s.p)}</div></div>`).join("");
+    html += `${disp}
+      ${busy ? `<button class="btn line" data-act="cancelSale">Cancel sale</button>` : (T.status !== "idle" ? `<button class="btn alt" data-act="newSale">New sale</button>` : "")}
+      <h4>Items</h4><div class="tiles">${tiles}</div>
+      <div class="card"><div class="row c"><b>Takings today</b><span class="pay num">${gbp(total)}</span></div>
+        <div class="ledger">${sales || `<div class="note">No card payments yet.</div>`}</div></div>
+      <div class="note">Try the hoodie to see a declined tap: it is over the default £25 per-tap limit. Student price and vouchers apply when the card is tapped.</div>`;
+  } else {
+    let disp = `<div class="t-display"><small>Door reader</small><div class="big">Locked</div><div>Choose the door you are standing at</div></div>`;
+    if (T.status === "waiting" && T.door) disp = `<div class="t-display"><small>${esc(zoneOf(T.door).n)}</small><div class="big">Locked</div>${wavesHTML}<div>Present card or phone</div></div>`;
+    if (T.status === "approved" && l && l.z) disp = `<div class="t-display ok" role="status"><small>${esc(l.z.n)}</small><div class="big">Unlocked</div><div>${esc(l.why)}</div></div>`;
+    if (T.status === "declined" && l && l.z) disp = `<div class="t-display no" role="status"><small>${esc(l.z.n)}</small><div class="big">Denied</div><div>${esc(l.why)}</div></div>`;
+    const busy = T.status === "waiting";
+    const tiles = ZONES.map(z => `<button class="tile" data-act="door" data-id="${z.id}" ${busy ? "disabled" : ""}><b>${esc(z.n)}</b><span class="sub">${z.rule === "always" ? "All students" : z.rule === "job" ? "Shift access" : "Day pass"}</span></button>`).join("");
+    const log = S.accessLog.slice(0, 4).map(e => `<div class="l"><div><div>${e.ok ? "Entered" : "Denied"} · ${esc(e.zone)}</div><div class="sub">${esc(e.t)} · ${esc(e.why)}</div></div></div>`).join("");
+    html += `${disp}
+      ${busy ? `<button class="btn line" data-act="cancelSale">Cancel</button>` : (T.status !== "idle" ? `<button class="btn alt" data-act="newSale">Next person</button>` : "")}
+      <h4>Doors</h4><div class="tiles">${tiles}</div>
+      <div class="card"><b>Door log</b><div class="ledger">${log || `<div class="note">No taps yet.</div>`}</div></div>
+      <div class="note">Try Library, level 3 without a shift to see a denial. Accept the Library shelf check, move the demo clock to Tue 15:45 and tap again.</div>`;
+  }
+  document.getElementById("reader-screen").innerHTML = html;
+}
+
+function renderClock() {
+  const d = dayOf(S.clock), t = S.clock % 24;
+  const dayOpts = DAYNAMES.map(n => `<option value="${n}" ${n === d ? "selected" : ""}>${n} ${DATES[n]}</option>`).join("");
+  const slots = Array.from({ length: 48 }, (_, i) => i / 2); if (!slots.includes(t)) { slots.push(t); slots.sort((x, y) => x - y); }
+  const timeOpts = slots.map(h => `<option value="${h}" ${h === t ? "selected" : ""}>${fmtT(h)}</option>`).join("");
+  document.getElementById("clockbar").innerHTML = `<b>Demo clock</b>
+    <span class="sel"><label class="sr" for="ck-day" style="position:absolute;left:-9999px">Day</label><select id="ck-day" data-chg="ckday">${dayOpts}</select>
+    <label for="ck-time" style="position:absolute;left:-9999px">Time</label><select id="ck-time" data-chg="cktime">${timeOpts}</select></span>
+    <button class="ghost small" data-act="nextShift">Jump to my next shift</button>
+    <span class="hint">Check-in opens 30 minutes before a shift, so move the clock to try early, on-time or late taps.</span>`;
+}
+
+function renderGuide() {
+  const g = document.getElementById("guide"); if (!g) return;
+  const real = S.jobs.filter(j => !j.past);
+  const steps = [
+    ["Accept a job", "Jobs tab, then Accept", real.some(j => j.status !== "open")],
+    ["Tap in and out", "My work tab. Use the demo clock links", real.some(j => j.proof)],
+    ["Approve the pay", "Open the Department screen", real.some(j => j.status === "paid")],
+    ["Pay at the reader", "Start a sale, then tap on Card", S.term.sales.length > 0],
+    ["Earn and redeem", "Perks tab, then Redeem", S.vouchers.length > 0 || S.ptsSpent > 0],
+    ["Open a door", "Reader, Door mode, then tap on Card", S.accessLog.some(l => l.ok)],
+    ["Withdraw to bank", "Wallet tab, then confirm", S.ledger.some(l => l.kind === "out")]
+  ];
+  const n = steps.filter(s => s[2]).length;
+  g.innerHTML = `<div class="gh"><b>Walkthrough</b><span class="sub">${n} of 7 done${n === 7 ? ". That is a full payday." : ""}</span></div>
+    <ol>${steps.map(s => `<li class="${s[2] ? "done" : ""}"><b>${s[0]}</b><span>${s[1]}</span></li>`).join("")}</ol>`;
+}
+function render() {
+  const scrolls = [...document.querySelectorAll(".screen")].map(s => s.scrollTop);
+  renderClock(); renderStudent(); renderDept(); renderReader(); renderGuide();
+  document.querySelectorAll(".screen").forEach((s, i) => { s.scrollTop = scrolls[i] || 0; });
+  ["student", "dept", "reader"].forEach(v => {
+    document.getElementById("col-" + v).classList.toggle("on", S.view === v);
+    document.getElementById("seg-" + v).setAttribute("aria-selected", S.view === v);
+  });
+  const tb = document.getElementById("theme-btn");
+  if (tb) tb.textContent = currentTheme() === "dark" ? "Light mode" : "Dark mode";
+}
+
+let toastTimer;
+function toast(msg, err) {
+  const t = document.getElementById("toast");
+  t.textContent = msg; t.className = "toast" + (err ? " err" : ""); t.hidden = false;
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => { t.hidden = true; }, 3000);
+}
+
+/* ---------- theme ---------- */
+function currentTheme() {
+  const a = document.documentElement.getAttribute("data-theme");
+  if (a) return a;
+  return window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+}
+function setTheme(t) {
+  document.documentElement.setAttribute("data-theme", t);
+  try { localStorage.setItem("pmn-theme", t); } catch (e) { /* storage can be blocked */ }
+}
+try { const t = localStorage.getItem("pmn-theme"); if (t === "dark" || t === "light") document.documentElement.setAttribute("data-theme", t); } catch (e) { /* ignore */ }
+
+/* ---------- actions ---------- */
+const find = id => S.jobs.find(j => j.id === Number(id));
+const actions = {
+  view: b => { S.view = b.dataset.v; },
+  tab: b => { S.tab = b.dataset.v; },
+  filter: b => { S.filter = b.dataset.v; },
+  theme: () => setTheme(currentTheme() === "dark" ? "light" : "dark"),
+  bell: () => { S.sheet = "notifs"; S.notifs.forEach(n => { n.read = true; }); },
+  closeSheet: () => { if (!S.sheetBusy) S.sheet = null; },
+  cancelTap: () => { if (tapCtl) { tapCtl.cancelled = true; if (tapCtl.ctrl) tapCtl.ctrl.abort(); } if (S.sheet === "tap") S.sheet = null; },
+
+  accept: b => {
+    const j = find(b.dataset.id); if (!j) return;
+    const why = blocker(j); if (why) return toast(why + ".", true);
+    j.status = "accepted"; note("You accepted " + j.title + " on " + when(j) + ".");
+    toast("Accepted. Find it under My work.");
+  },
+  jump: b => {
+    const j = find(b.dataset.id); if (!j) return;
+    S.clock = b.dataset.v === "start" ? startAbs(j) - 0.25 : endAbs(j);
+  },
+  nextShift: () => {
+    const list = S.jobs.filter(j => j.status === "accepted" || j.status === "working").sort((a, b) => startAbs(a) - startAbs(b));
+    const next = list.find(j => endAbs(j) > S.clock) || list[0];
+    if (!next) return toast("Accept a job first, then I can jump to it.", true);
+    S.clock = Math.max(0, startAbs(next) - 0.25);
+  },
+  checkin: async b => {
+    const j = find(b.dataset.id); if (!j || j.status !== "accepted") return;
+    if (S.clock < startAbs(j) - 0.5) return toast("Too early. Check-in opens at " + fmtT(j.start - 0.5) + " on " + j.day + ".", true);
+    if (S.clock > endAbs(j)) return toast("This shift has finished. Ask for a manual sign-off instead.", true);
+    const ok = await nfcTap("Hold your card or phone to the " + (j.loc || "shift") + " reader to check in.");
+    if (!ok) return toast("Tap cancelled.", true);
+    if (j.status !== "accepted") return;
+    j.status = "working"; j.checkIn = S.clock;
+    const late = S.clock > startAbs(j) + 0.25;
+    if (late) S.streak = 0; else { S.ptsBonus += 5; S.streak += 1; }
+    checkTier();
+    S.readerLog.unshift({ ev: "Check-in", job: j.title, who: "Priya", t: fmtT(S.clock % 24), flag: late ? "Late" : "On time" });
+    note("Checked in to " + j.title + " at " + fmtT(S.clock % 24) + (late ? " (late)." : "."));
+    beep(true); toast("Checked in" + (late ? ", marked late." : "."));
+  },
+  checkout: async b => {
+    const j = find(b.dataset.id); if (!j || j.status !== "working") return;
+    const ok = await nfcTap("Hold your card or phone to the reader to check out.");
+    if (!ok) return toast("Tap cancelled.", true);
+    if (j.status !== "working") return;
+    const from = Math.max(j.checkIn, startAbs(j)), to = Math.min(S.clock, endAbs(j));
+    const hrs = Math.max(0, to - from), full = hrs >= dur(j) - 0.08;
+    j.status = "done"; j.checkOut = S.clock; j.proof = "nfc";
+    j.verified = full ? dur(j) : hrs;
+    j.verifiedPay = full ? j.pay : money(j.pay * hrs / dur(j));
+    j.proofTxt = "Tap in " + fmtT(j.checkIn % 24) + " · out " + fmtT(S.clock % 24);
+    S.readerLog.unshift({ ev: "Check-out", job: j.title, who: "Priya", t: fmtT(S.clock % 24), flag: full ? "Full shift" : "Left early, pay prorated" });
+    note(j.title + " sent for approval: " + j.verified.toFixed(1) + "h verified, " + gbp(j.verifiedPay) + ".");
+    checkTier();
+    beep(true); toast("Hours verified. Sent to the department for approval.");
+  },
+  manual: b => {
+    const j = find(b.dataset.id); if (!j || j.status !== "accepted") return;
+    j.status = "done"; j.proof = "manual"; j.verified = dur(j); j.verifiedPay = j.pay;
+    S.readerLog.unshift({ ev: "Manual sign-off asked", job: j.title, who: "Priya", t: fmtT(S.clock % 24), flag: "No tap" });
+    note(j.title + " sent for manual sign-off, because there was no tap.");
+    toast("Sent for manual sign-off. Staff will check it.");
+  },
+  approve: b => {
+    const j = find(b.dataset.id); if (!j || j.status !== "done") return;
+    const amt = j.verifiedPay ?? j.pay;
+    j.status = "paid"; j.paidAmt = amt;
+    S.ledger.push({ t: "Today", label: j.title, amount: amt, kind: "earn" });
+    note(gbp(amt) + " from " + j.title + " is in your wallet. Half is available now.");
+    toast(gbp(amt) + " added to Priya's wallet. Half is available now.");
+  },
+
+  amt: b => { S.amt = String(b.dataset.v); },
+  withdraw: () => {
+    const v = money(parseFloat(S.amt));
+    if (!(v > 0)) return toast("Enter an amount to withdraw.", true);
+    if (v > available()) return toast("You can withdraw up to " + gbp(available()) + " right now.", true);
+    S.sheet = "withdraw"; S.sheetAmt = v; S.sheetBusy = false;
+  },
+  confirmWithdraw: async () => {
+    if (S.sheetBusy) return;
+    S.sheetBusy = true; render();
+    await sleep(900);
+    const v = S.sheetAmt;
+    S.sheetBusy = false; S.sheet = null;
+    if (v > available()) return toast("Your balance changed, try again.", true);
+    S.withdrawn = money(S.withdrawn + v);
+    S.ledger.push({ t: "Today", label: "Instant withdrawal", amount: v, kind: "out" });
+    S.amt = "";
+    note(gbp(v) + " sent to your bank account. No interest.");
+    beep(true); toast(gbp(v) + " withdrawn. No interest charged.");
+  },
+
+  freeze: () => { S.card.frozen = !S.card.frozen; note(S.card.frozen ? "Card frozen." : "Card unfrozen."); },
+  sound: () => { S.card.sound = !S.card.sound; },
+  real: () => { if (NFC_OK) S.card.real = !S.card.real; },
+
+  sale: b => {
+    const item = SHOP.find(i => i.id === b.dataset.id); if (!item) return;
+    S.term.pending = item; S.term.door = null; S.term.status = "waiting"; S.term.msg = ""; S.term.last = null;
+    note("Union Café is asking for " + gbp(item.p) + " (" + item.n + "). Open Card to tap.");
+  },
+  cancelSale: () => { S.term.pending = null; S.term.status = "idle"; },
+  newSale: () => { S.term.status = "idle"; S.term.last = null; S.term.msg = ""; },
+  pay: async () => {
+    const T = S.term, item = T.pending; if (!item) return;
+    const ok = await nfcTap("Hold your card or phone to the reader to pay " + gbp(priceFor(item).final) + ".");
+    if (!ok) return toast("Tap cancelled.", true);
+    if (!T.pending) return;
+    const pr = priceFor(item), c = S.card; let why = "";
+    if (c.frozen) why = "Card frozen";
+    else if (pr.final > c.limit) why = "Over per-tap limit (" + gbp(c.limit) + ")";
+    else if (pr.final > available()) why = "Insufficient available balance";
+    T.pending = null; T.last = { n: item.n, p: pr.final, note: pr.note };
+    if (why) {
+      T.status = "declined"; T.msg = why;
+      note("Declined: " + item.n + " " + gbp(pr.final) + ". " + why + ".");
+      beep(false); toast("Declined: " + why + ".", true);
+    } else {
+      T.status = "approved"; T.msg = "";
+      if (pr.voucher !== undefined) S.vouchers.splice(pr.voucher, 1);
+      S.saved = money(S.saved + (item.p - pr.final));
+      S.withdrawn = money(S.withdrawn + pr.final);
+      S.ledger.push({ t: "Today", label: item.n + (pr.note ? " · " + pr.note : " · Union Café"), amount: pr.final, kind: "card" });
+      T.sales.unshift({ n: item.n, p: pr.final, t: clockShort(S.clock) });
+      note("Paid " + gbp(pr.final) + " for " + item.n + " at Union Café" + (pr.note ? " (" + pr.note.toLowerCase() + ")." : "."));
+      beep(true); toast(gbp(pr.final) + " paid by contactless" + (pr.note ? ". " + pr.note + "." : "."));
+    }
+  },
+  jobsview: b => { S.jobsView = b.dataset.v; },
+  redeem: b => {
+    const r = REWARDS.find(x => x.id === b.dataset.id); if (!r) return;
+    if (points() < r.cost) return toast("Not enough points yet.", true);
+    S.ptsSpent += r.cost; S.vouchers.push({ item: r.item, label: r.label });
+    note("Redeemed: " + r.label + "."); toast(r.label + " added to your vouchers.");
+  },
+  rmode: b => { const T = S.term; T.mode = b.dataset.v; T.status = "idle"; T.pending = null; T.door = null; T.last = null; T.msg = ""; },
+  door: b => {
+    const T = S.term, z = zoneOf(b.dataset.id); if (!z) return;
+    T.door = z.id; T.pending = null; T.status = "waiting"; T.last = null; T.msg = "";
+    note("The door reader at " + z.n + " is waiting for your card. Open Card to tap.");
+  },
+  enter: async () => {
+    const T = S.term; if (!T.door) return;
+    const z = zoneOf(T.door);
+    const ok = await nfcTap("Hold your card or phone to the door reader.");
+    if (!ok) return toast("Tap cancelled.", true);
+    if (!T.door) return;
+    const a = accessFor(z);
+    T.last = { z, why: a.why }; T.status = a.ok ? "approved" : "declined"; T.msg = a.why;
+    S.accessLog.unshift({ ok: a.ok, zone: z.n, why: a.why, t: clockShort(S.clock) }); S.accessLog = S.accessLog.slice(0, 20);
+    if (a.ok) {
+      if (a.voucher !== undefined) { S.vouchers.splice(a.voucher, 1); S.saved = money(S.saved + 5); }
+      note("Entered " + z.n + ". " + a.why + "."); beep(true); toast("Door unlocked.");
+    } else { note("Denied at " + z.n + ": " + a.why + "."); beep(false); toast("Access denied: " + a.why, true); }
+    T.door = null;
+  },
+  reset: () => { S = seed(); toast("Demo reset."); }
+};
+const changes = {
+  ckday: t => { S.clock = DAYIDX[t.value] * 24 + (S.clock % 24); },
+  cktime: t => { S.clock = Math.floor(S.clock / 24) * 24 + parseFloat(t.value); },
+  hlimit: t => { S.hoursLimit = Number(t.value); },
+  limit: t => { S.card.limit = Number(t.value); }
+};
+document.addEventListener("click", e => {
+  const b = e.target.closest("[data-act]");
+  if (!b || b.disabled) return;
+  const a = actions[b.dataset.act]; if (!a) return;
+  const r = a(b); render();
+  if (r && typeof r.then === "function") r.then(render);
+});
+document.addEventListener("change", e => {
+  const t = e.target.closest("[data-chg]"); if (!t) return;
+  const a = changes[t.dataset.chg]; if (a) { a(t); render(); }
+});
+document.addEventListener("input", e => {
+  const t = e.target;
+  if (t.dataset.draft) S.draft[t.dataset.draft] = t.value;
+  if (t.hasAttribute("data-draft-amt")) S.amt = t.value;
+});
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape" && S.sheet && S.sheet !== "tap" && !S.sheetBusy) { S.sheet = null; render(); }
+  if (e.key === "Escape" && S.sheet === "tap") { actions.cancelTap(); render(); }
+});
+document.addEventListener("submit", e => {
+  e.preventDefault();
+  const d = S.draft, title = d.title.trim(), pay = parseFloat(d.pay);
+  if (!title) return toast("Give the task a name.", true);
+  if (!(pay > 0)) return toast("Enter the pay for this task.", true);
+  const start = Number(d.start);
+  S.jobs.unshift({ id: S.nextId++, title, dept: d.dept.trim() || "University", loc: "Set by department", day: d.day, start, end: start + Number(d.hours), pay: money(pay), status: "open" });
+  S.draft.title = "";
+  toast("Task posted. It now shows in the student app.");
+  render();
+});
+document.getElementById("nfc-foot").textContent = NFC_OK
+  ? "This browser supports Web NFC: turn it on under Card controls to tap with a real tag."
+  : "NFC taps are simulated here. Web NFC works in Chrome on Android over HTTPS.";
+render();
+
+</script>
+<script>
+/* ---------- site: hero loop, QR, copy link ---------- */
+(function () {
+  const SITE_URL = "__SITE_URL__";
+  const reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  // hero phone: a short looping story, complete at rest
+  const bal = document.getElementById("hp-bal"), meter = document.getElementById("hp-meter"), feed = document.getElementById("hp-feed"),
+        ring = document.getElementById("hp-ring"), tag = document.getElementById("hp-tag"), noteEl = document.getElementById("hp-note");
+  let shown = 18, cap = 36;
+  function setMeter(spent, capNow) { meter.style.width = capNow > 0 ? Math.min(100, spent / capNow * 100) + "%" : "0%"; }
+  function count(to) {
+    const from = shown, t0 = performance.now();
+    shown = to;
+    if (reduce) { bal.textContent = "£" + to.toFixed(2); return; }
+    (function f(t) { const k = Math.min(1, (t - t0) / 650), e = 1 - Math.pow(1 - k, 3); bal.textContent = "£" + (from + (to - from) * e).toFixed(2); if (k < 1) requestAnimationFrame(f); })(t0);
+  }
+  function row(a, b) { const d = document.createElement("div"); d.className = "r in"; d.innerHTML = "<span>" + a + "</span><b>" + b + "</b>"; feed.prepend(d); while (feed.children.length > 3) feed.lastChild.remove(); }
+  function tap(msg) { tag.textContent = msg; ring.classList.remove("go"); void ring.offsetWidth; ring.classList.add("go"); }
+  const script = [
+    [2600, () => { tap("Tap in 11:45 · verified"); }],
+    [1800, () => { cap = 75; row("Open day stewarding", "+£39.00"); count(37.5); noteEl.textContent = "Shift approved. Half is yours now."; tag.textContent = "Approved by Admissions"; }],
+    [2800, () => { tap("Union Café · £2.80"); row("Flat white · tap", "−£2.80"); count(34.7); setMeter(2.8, cap / 2); noteEl.textContent = "Paid by contactless"; }],
+    [2800, () => { tag.textContent = "Faster Payments · £10.00"; row("Withdrawal to bank", "−£10.00"); count(24.7); setMeter(12.8, cap / 2); noteEl.textContent = "No interest, no fee"; }],
+    [3600, () => { shown = 18; cap = 36; feed.innerHTML = '<div class="r"><span>Welcome week help desk</span><b>+£36.00</b></div>'; count(18); setMeter(0, 18); noteEl.textContent = "Up to 50% of what you have earned"; tag.textContent = "Reader T-04 online"; }]
+  ];
+  if (!reduce) { let i = 0; (function next() { const [d, fn] = script[i % script.length]; setTimeout(() => { fn(); i++; next(); }, d); })(); }
+
+  // QR from the site address (own SVG so it prints crisply on any background)
+  function drawQR(text) {
+    const box = document.getElementById("qr");
+    if (typeof qrcode !== "function") { box.innerHTML = '<small style="color:#3a4456">QR code could not load. Use the link instead.</small>'; return; }
+    const q = qrcode(0, "M"); q.addData(text); q.make();
+    const n = q.getModuleCount(), m = 2; let p = "";
+    for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) if (q.isDark(r, c)) p += "M" + (c + m) + " " + (r + m) + "h1v1h-1z";
+    box.innerHTML = '<svg viewBox="0 0 ' + (n + 2 * m) + " " + (n + 2 * m) + '" shape-rendering="crispEdges" aria-hidden="true"><rect width="100%" height="100%" fill="#fff"/><path d="' + p + '" fill="#000"/></svg>';
+  }
+  const url = SITE_URL.indexOf("__") === 0 ? location.href : SITE_URL;
+  document.getElementById("site-url").textContent = url;
+  drawQR(url);
+  document.getElementById("copy-url").addEventListener("click", function () {
+    const b = this;
+    try { navigator.clipboard.writeText(url).then(() => { b.textContent = "Copied"; setTimeout(() => { b.textContent = "Copy link"; }, 1800); }, () => { b.textContent = "Select the link to copy"; }); }
+    catch (e) { b.textContent = "Select the link to copy"; }
+  });
+})();
+</script>
+</body>
+</html>
